@@ -1,0 +1,24 @@
+
+response = Map();
+response.put("text","Welcome to the LinkedIn Bot!\n\n I'm here to help you manage your posts and polls on both personal and organizational pages.\n\n1.To create a post, simply use the \"/createpost\" command.\n\n2.For creating a poll, access the \"create poll\" and to view polls access the \"View polls\" menu action.\n\n3.Use \"ShareOnOrganization\" and \"ShareOnPersonal\" message actions to share messages on your linkedin page from cliq.\n\n4.To view posts and comments or edit posts on your organization page, navigate to the widget dedicated to organization page posts.\n\n");
+// bot = Map();
+// bot.put("name","Linkedin");
+// response.put("bot",bot);
+card = Map();
+card.put("title","Linkedin");
+card.put("icon","https://cdn1.iconfinder.com/data/icons/logotypes/32/square-linkedin-512.png");
+card.put("thumbnail","https://cdn1.iconfinder.com/data/icons/logotypes/32/square-linkedin-512.png");
+card.put("theme","prompt");
+response.put("card",card);
+slidesList = list();
+slidesList0 = Map();
+slidesList0.put("type","list");
+slidesList0.put("title","Actions");
+dataList = list();
+dataList.add("To create post  -  /createpost (slash command)");
+dataList.add("To create poll   - create poll (bot menu action)");
+dataList.add("To manage post  - LinkedIn (widget)");
+slidesList0.put("data",dataList);
+slidesList.add(slidesList0);
+response.put("slides",slidesList);
+return response;

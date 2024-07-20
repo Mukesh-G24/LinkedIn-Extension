@@ -1,0 +1,50 @@
+info target;
+info arguments;
+id = arguments.get("key");
+info id;
+id = zoho.encryption.urlEncode(id);
+response = Map();
+bot = Map();
+bot.put("name","Linkedin");
+bot.put("image","https://cdn1.iconfinder.com/data/icons/logotypes/32/circle-linkedin-512.png");
+response.put("bot",bot);
+card = Map();
+card.put("title","POLL DETAILS");
+response.put("card",card);
+slidesList = list();
+slidesList0 = Map();
+slidesList0.put("type","table");
+data = Map();
+headersList = list();
+headersList.add("Options");
+headersList.add("Vote count");
+data.put("headers",headersList);
+getpoll = invokeurl
+[
+	url :"https://api.linkedin.com/rest/posts/" + id
+	type :GET
+	headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+	detailed:true
+	connection:"linkedin"
+];
+info getpoll;
+question = getpoll.get("responseText").get("content").get("poll").get("question");
+commentary = getpoll.get("responseText").get("commentary");
+optionslist = getpoll.get("responseText").get("content").get("poll").get("options");
+rows = list();
+for each  option in optionslist
+{
+	text = option.get("text");
+	count = option.get("voteCount");
+	r = Map();
+	r.put("Options",text);
+	r.put("Vote count",count);
+	rows.add(r);
+}
+data.put("rows",rows);
+slidesList0.put("data",data);
+slidesList.add(slidesList0);
+response.put("slides",slidesList);
+response.put("text","*DESCRIPTION* : " + commentary + "\n*QUESTION* : " + question);
+response.put("navigation",true);
+return response;

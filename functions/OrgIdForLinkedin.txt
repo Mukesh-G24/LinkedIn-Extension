@@ -1,0 +1,677 @@
+info form;
+purpose = form.get("values").get("for");
+info purpose;
+if(purpose == "create")
+{
+	info form;
+	orgid = form.get("values").get("select").get("value");
+	id = "urn:li:organization:" + orgid;
+	info id;
+	response = {"type":"form","title":"POST DETAILS","name":"details","button_label":"Post","inputs":{{"label":"Title","name":"title","placeholder":"Give title for your post","min_length":"0","max_length":"100","mandatory":true,"type":"text"},{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"},{"label":"Who can see your posts?","name":"visibility","mandatory":true,"type":"radio","options":{{"value":"PUBLIC","label":"Anyone"},{"value":"CONNECTIONS","label":"Connections only"}}},{"label":"Would you like to attach a file or share a URL?","name":"radio","type":"radio","trigger_on_change":true,"options":{{"value":"image","label":"Image"},{"value":"video","label":"Video"},{"value":"article","label":"Article or URL"}}},{"name":"hidden","value":id,"type":"hidden"}},"action":{"type":"invoke.function","name":"createPost"}};
+	return response;
+}
+else if(purpose == "share")
+{
+	// info messages;
+	// info message;
+	// list=messages.get("list");
+	// img=0;
+	// video=0;
+	// unfurled=0;
+	// text=0;
+	// info list;
+	// for each element in list
+	// {
+	// 	if(element.containKey("file"))
+	// 	{
+	// 		file=element.get("file");
+	// 		type=file.getfiletype();
+	// 		if(type.contains("image"))
+	// 		{
+	// 			img=img+1;
+	// 		}
+	// 		else if(type.contains("video"))
+	// 		{
+	// 			video=video+1;
+	// 		}
+	// 	}
+	// 	else if(element.containKey("unfurled_details"))
+	// 	{
+	// 		unfurled=unfurled+1;
+	// 	}
+	// 	else if(element.containKey("text"))
+	// 	{
+	// 		text=text+1;
+	// 	}
+	// }
+	// info img+" "+video+" "+unfurled+" "+text;
+	// if(img>0 && (video>0 || unfurled>0 ||  text>0))
+	// {
+	// 	response={"type":"banner","text":"You can't able to share this combination of files.","status":"failure"};
+	// 	return response;
+	// }
+	// else if(video>0 && (img>0 ||  unfurled>0 || text>0))
+	// {
+	// 	response={"type":"banner","text":"You can't able to share this combination of files.","status":"failure"};
+	// 	return response;
+	// }
+	// else if(unfurled>0 && (img>0 ||  video>0 || text>0))
+	// {
+	// 	response={"type":"banner","text":"You can't able to share this combination of files.","status":"failure"};
+	// 	return response;
+	// }
+	// else if(text>0 && (img>0 ||  video>0 || unfurled>0))
+	// {
+	// 	response={"type":"banner","text":"You can't able to share this combination of files.","status":"failure"};
+	// 	return response;
+	// }
+	info form;
+	id = form.get("values").get("select").get("value");
+	id = "urn:li:organization:" + id;
+	from = form.get("values").get("from");
+	if(from == "image")
+	{
+		list = messages.get("list");
+		if(list.size() == 1)
+		{
+			file = message.get("file");
+			initializeupload = invokeurl
+			[
+				url :"https://api.linkedin.com/rest/images?action=initializeUpload"
+				type :POST
+				parameters:{"initializeUploadRequest":{"owner":id}} + ""
+				headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+				connection:"linkedin"
+			];
+			imageurl = initializeupload.get("value").get("uploadUrl");
+			image = initializeupload.get("value").get("image").toList(":").get(3);
+			img = initializeupload.get("value").get("image");
+			// 		file = files.get(0);
+			upload = invokeurl
+			[
+				url :imageurl
+				type :PUT
+				parameters:file
+				headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+				detailed:true
+				content-type:"application/octet-stream"
+			];
+			response = {"type":"form","title":"Post Details","name":"post","button_label":"Post","inputs":{{"label":"Title","name":"text","placeholder":"Give title to your post","min_length":"0","max_length":"100","mandatory":true,"type":"text"},{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"},{"label":"Who can see your posts?","name":"visibility","mandatory":true,"type":"radio","options":{{"value":"PUBLIC","label":"Anyone"},{"value":"CONNECTIONS","label":"Connections only"}}},{"name":"id","value":id,"type":"hidden"},{"name":"image","value":image,"type":"hidden"},{"name":"from","value":"image","type":"hidden"}},"action":{"type":"invoke.function","name":"sharePost"}};
+			return response;
+		}
+		else
+		{
+			files = list();
+			for each  e in list
+			{
+				f = e.get("file");
+				files.add(f);
+			}
+			urlList = list();
+			idList = list();
+			imageList = list();
+			i = 0;
+			for each  val in files
+			{
+				initializeupload = invokeurl
+				[
+					url :"https://api.linkedin.com/rest/images?action=initializeUpload"
+					type :POST
+					parameters:{"initializeUploadRequest":{"owner":id}} + ""
+					headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+					connection:"linkedin"
+				];
+				imageurl = initializeupload.get("value").get("uploadUrl");
+				urlList.add(imageurl);
+				image = initializeupload.get("value").get("image").toList(":").get(3);
+				img = initializeupload.get("value").get("image");
+				idList.add(img);
+				file = files.get(i);
+				uploadurl = urlList.get(i);
+				upload = invokeurl
+				[
+					url :uploadurl
+					type :PUT
+					parameters:file
+					headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+					detailed:true
+					content-type:"application/octet-stream"
+				];
+				imageList.add({"id":idList.get(i)});
+				i = i + 1;
+			}
+			response = {"type":"form","title":"Post Details","name":"post","button_label":"Post","inputs":{{"label":"Title","name":"text","placeholder":"Give title to your post","min_length":"0","max_length":"100","mandatory":true,"type":"text"},{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"},{"label":"Who can see your posts?","name":"visibility","mandatory":true,"type":"radio","options":{{"value":"PUBLIC","label":"Anyone"},{"value":"CONNECTIONS","label":"Connections only"}}},{"name":"id","value":id,"type":"hidden"},{"name":"imageList","value":imageList,"type":"hidden"},{"name":"from","value":"multiimage","type":"hidden"}},"action":{"type":"invoke.function","name":"sharePost"}};
+			return response;
+		}
+	}
+	else if(from == "video")
+	{
+		file = message.get("file");
+		size = file.getfilesize();
+		uploadinitialize = invokeurl
+		[
+			url :"https://api.linkedin.com/rest/videos?action=initializeUpload"
+			type :POST
+			parameters:{"initializeUploadRequest":{"owner":id,"fileSizeBytes":size,"uploadCaptions":false,"uploadThumbnail":false}} + ""
+			headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			connection:"linkedin"
+		];
+		video = uploadinitialize.get("value").get("video");
+		url = uploadinitialize.get("value").get("uploadInstructions").getJSON("uploadUrl");
+		upload = invokeurl
+		[
+			url :url
+			type :POST
+			parameters:file
+			headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			detailed:true
+			connection:"linkedin"
+			content-type:"application/octet-stream"
+		];
+		etag = upload.get("responseHeader").get("etag");
+		final = invokeurl
+		[
+			url :"https://api.linkedin.com/rest/videos?action=finalizeUpload"
+			type :POST
+			parameters:{"finalizeUploadRequest":{"video":video,"uploadToken":"","uploadedPartIds":{etag}}} + ""
+			headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			detailed:true
+			connection:"linkedin"
+		];
+		asset = uploadinitialize.get("value").get("video").toList(":").get(3);
+		response = {"type":"form","title":"Post Details","name":"post","button_label":"Post","inputs":{{"label":"Title","name":"text","placeholder":"Give title to your post","min_length":"0","max_length":"100","mandatory":true,"type":"text"},{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"},{"label":"Who can see your posts?","name":"visibility","mandatory":true,"type":"radio","options":{{"value":"PUBLIC","label":"Anyone"},{"value":"CONNECTIONS","label":"Connections only"}}},{"name":"id","value":id,"type":"hidden"},{"name":"asset","value":asset,"type":"hidden"},{"name":"from","value":"video","type":"hidden"}},"action":{"type":"invoke.function","name":"sharePost"}};
+		return response;
+	}
+	else if(from == "link")
+	{
+		t = message.get("text");
+		if(t.length() > 3000)
+		{
+			subtext = t.subString(0,3000);
+			t = subtext;
+		}
+		link = message.get("unfurled_details").get("url");
+		response = {"type":"form","title":"Post Details","name":"post","button_label":"Post","inputs":{{"label":"Title","name":"text","placeholder":"Give title to your post","min_length":"0","max_length":"100","mandatory":true,"type":"text"},{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea","value":t},{"label":"Who can see your posts?","name":"visibility","mandatory":true,"type":"radio","options":{{"value":"PUBLIC","label":"Anyone"},{"value":"CONNECTIONS","label":"Connections only"}}},{"name":"id","value":id,"type":"hidden"},{"name":"url","value":link,"type":"hidden"},{"name":"from","value":"link","type":"hidden"}},"action":{"type":"invoke.function","name":"sharePost"}};
+		return response;
+	}
+	else if(from == "text")
+	{
+		t = message.get("text");
+		if(t.length() > 3000)
+		{
+			subtext = t.subString(0,3000);
+			t = subtext;
+		}
+		info t;
+		if(t.contains("https://") || t.contains("http://"))
+		{
+			start = t.indexOf("http");
+			ss = t.subString(start);
+			end = ss.indexOf(" ");
+			link = ss.subString(0,end);
+			info link;
+			response = {"type":"form","title":"Post Details","name":"post","button_label":"Post","inputs":{{"label":"Title","name":"text","placeholder":"Give title to your post","min_length":"0","max_length":"100","mandatory":true,"type":"text"},{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea","value":t},{"label":"Who can see your posts?","name":"visibility","mandatory":true,"type":"radio","options":{{"value":"PUBLIC","label":"Anyone"},{"value":"CONNECTIONS","label":"Connections only"}}},{"name":"id","value":id,"type":"hidden"},{"name":"url","value":link,"type":"hidden"},{"name":"from","value":"link","type":"hidden"}},"action":{"type":"invoke.function","name":"sharePost"}};
+			return response;
+		}
+		else
+		{
+			response = {"type":"form","title":"Post Details","name":"post","button_label":"Post","inputs":{{"label":"Title","name":"text","placeholder":"Give title to your post","min_length":"0","max_length":"100","mandatory":true,"type":"text"},{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea","value":t},{"label":"Who can see your posts?","name":"visibility","mandatory":true,"type":"radio","options":{{"value":"PUBLIC","label":"Anyone"},{"value":"CONNECTIONS","label":"Connections only"}}},{"name":"id","value":id,"type":"hidden"},{"name":"from","value":"text","type":"hidden"}},"action":{"type":"invoke.function","name":"sharePost"}};
+			return response;
+		}
+	}
+}
+else if(purpose == "createpoll")
+{
+	id = form.get("values").get("select").get("value");
+	id = "urn:li:organization:" + id;
+	response = {"type":"form","title":"POLL DETAILS","name":"poll","button_label":"Post","inputs":{{"label":"Question","name":"question","placeholder":"Question of your poll  ","min_length":"0","max_length":"3000","mandatory":true,"type":"textarea"},{"label":"About","name":"commentry","placeholder":"What do you want to talk about?  ","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"},{"label":"No of options","name":"option","mandatory":true,"type":"radio","trigger_on_change":true,"options":{{"value":"2","label":"2"},{"value":"3","label":"3"},{"value":"4","label":"4"}}},{"label":"Duration of the poll","name":"duration","mandatory":true,"type":"radio","trigger_on_change":true,"options":{{"value":"1","label":"1 day"},{"value":"3","label":"3 days"},{"value":"7","label":" 7 days"},{"value":"14","label":"14 days"}}},{"name":"id","value":id,"type":"hidden"}},"action":{"type":"invoke.function","name":"pollbuilder"}};
+	return response;
+}
+else if(purpose == "completedpoll")
+{
+	info form;
+	orgid = form.get("values").get("select").get("value");
+	getcompany = invokeurl
+	[
+		url :"https://api.linkedin.com/rest/organizations/" + orgid
+		type :GET
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+		connection:"linkedin"
+	];
+	info getcompany;
+	pagename = getcompany.get("vanityName");
+	orgid = "urn:li:organization:" + orgid;
+	key = orgid + ",";
+	encodedorgid = zoho.encryption.urlEncode(orgid);
+	allpost = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=0&count=100"
+		type :GET
+		headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+		connection:"linkedin"
+	];
+	// 	info allpost;
+	share = allpost.get("elements");
+	total = allpost.get("paging").get("total");
+	response = Map();
+	response.put("text","*Page : *" + pagename);
+	bot = Map();
+	bot.put("name","Linkedin");
+	response.put("bot",bot);
+	buttonsList = list();
+	card = Map();
+	card.put("title","COMPLETED POLL DETAILS");
+	response.put("card",card);
+	slidesList = list();
+	slidesList0 = Map();
+	slidesList0.put("type","table");
+	data = Map();
+	headersList = list();
+	headersList.add("Description");
+	headersList.add("Question");
+	headersList.add("View");
+	data.put("headers",headersList);
+	rows = list();
+	count = 0;
+	available = 0;
+	start = 0;
+	for each  post in share
+	{
+		category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+		if(category == "URN_REFERENCE")
+		{
+			media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+			if(media == "poll")
+			{
+				postid = post.getJSON("id");
+				id = zoho.encryption.urlEncode(postid);
+				getpoll = invokeurl
+				[
+					url :"https://api.linkedin.com/rest/posts/" + id
+					type :GET
+					headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+					detailed:true
+					connection:"linkedin"
+				];
+				published = getpoll.get("responseText").get("publishedAt");
+				publishedDate = toDateTimeString(published,"dd-MMM-y  H:mm:ss","IST");
+				closingDate = "";
+				duration = getpoll.get("responseText").get("content").get("poll").get("settings").get("duration");
+				if(duration.contains("ONE"))
+				{
+					closingDate = publishedDate.addDay(1);
+				}
+				else if(duration.contains("THREE"))
+				{
+					closingDate = publishedDate.addDay(3);
+				}
+				else if(duration.contains("SEVEN"))
+				{
+					closingDate = publishedDate.addDay(7);
+				}
+				else if(duration.contains("FOURTEEN"))
+				{
+					closingDate = publishedDate.addDay(14);
+				}
+				closingDate = toString(closingDate);
+				unixClosingDate = closingDate.unixEpoch("Asia/Calcutta");
+				n = toString(now);
+				unixNowDate = n.unixEpoch("Asia/Calcutta");
+				if(unixNowDate > unixClosingDate)
+				{
+					count = count + 1;
+					question = getpoll.get("responseText").get("content").get("poll").get("question");
+					info "Question : " + question;
+					commentary = getpoll.get("responseText").get("commentary");
+					optionslist = getpoll.get("responseText").get("content").get("poll").get("options");
+					r = Map();
+					r.put("Description",commentary);
+					r.put("Question",question);
+					r.put("View","[View Poll](invoke.function|viewPoll|scott.fisher@zylker.com|" + postid + ")");
+					rows.add(r);
+					start = start + 1;
+					available = available + 1;
+				}
+			}
+			else
+			{
+				start = start + 1;
+			}
+		}
+		else
+		{
+			start = start + 1;
+		}
+	}
+	if(available == 0)
+	{
+		return {"type":"banner","text":"No polls available in your page.","status":"failure"};
+	}
+	info "rows = " + rows;
+	info start;
+	s = toString(start);
+	key = key + s + ",";
+	key = key + "completed";
+	info count;
+	data.put("rows",rows);
+	slidesList0.put("data",data);
+	slidesList.add(slidesList0);
+	if(start != total)
+	{
+		encodedorgid = zoho.encryption.urlEncode(orgid);
+		allpost = invokeurl
+		[
+			url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=" + start + "&count=100"
+			type :GET
+			headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+			connection:"linkedin"
+		];
+		// 		info allpost;
+		share = allpost.get("elements");
+		total = allpost.get("paging").get("total");
+		count = 0;
+		available = 0;
+		for each  post in share
+		{
+			category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+			if(category == "URN_REFERENCE")
+			{
+				media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+				if(media == "poll")
+				{
+					postid = post.getJSON("id");
+					id = zoho.encryption.urlEncode(postid);
+					getpoll = invokeurl
+					[
+						url :"https://api.linkedin.com/rest/posts/" + id
+						type :GET
+						headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+						detailed:true
+						connection:"linkedin"
+					];
+					published = getpoll.get("responseText").get("publishedAt");
+					publishedDate = toDateTimeString(published,"dd-MMM-y  H:mm:ss","IST");
+					closingDate = "";
+					duration = getpoll.get("responseText").get("content").get("poll").get("settings").get("duration");
+					if(duration.contains("ONE"))
+					{
+						closingDate = publishedDate.addDay(1);
+					}
+					else if(duration.contains("THREE"))
+					{
+						closingDate = publishedDate.addDay(3);
+					}
+					else if(duration.contains("SEVEN"))
+					{
+						closingDate = publishedDate.addDay(7);
+					}
+					else if(duration.contains("FOURTEEN"))
+					{
+						closingDate = publishedDate.addDay(14);
+					}
+					closingDate = toString(closingDate);
+					unixClosingDate = closingDate.unixEpoch("Asia/Calcutta");
+					n = toString(now);
+					unixNowDate = n.unixEpoch("Asia/Calcutta");
+					if(unixNowDate > unixClosingDate)
+					{
+						count = count + 1;
+						start = start + 1;
+						available = available + 1;
+					}
+				}
+			}
+		}
+		if(available != 0)
+		{
+			buttonsList0 = Map();
+			buttonsList0.put("label","Next");
+			action = Map();
+			action.put("type","invoke.function");
+			data = Map();
+			data.put("name","nextPoll");
+			action.put("data",data);
+			buttonsList0.put("action",action);
+			buttonsList0.put("key",key);
+			buttonsList.add(buttonsList0);
+			slidesList0.put("buttons",buttonsList);
+		}
+	}
+	response.put("slides",slidesList);
+	response.put("navigation",true);
+	return response;
+}
+else if(purpose == "pendingpoll")
+{
+	info form;
+	orgid = form.get("values").get("select").get("value");
+	getcompany = invokeurl
+	[
+		url :"https://api.linkedin.com/rest/organizations/" + orgid
+		type :GET
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+		connection:"linkedin"
+	];
+	info getcompany;
+	pagename = getcompany.get("vanityName");
+	orgid = "urn:li:organization:" + orgid;
+	key = orgid + ",";
+	encodedorgid = zoho.encryption.urlEncode(orgid);
+	allpost = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=0&count=100"
+		type :GET
+		headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+		connection:"linkedin"
+	];
+	info allpost;
+	share = allpost.get("elements");
+	total = allpost.get("paging").get("total");
+	response = Map();
+	response.put("text","*Page : *" + pagename);
+	bot = Map();
+	bot.put("name","Linkedin");
+	response.put("bot",bot);
+	buttonsList = list();
+	card = Map();
+	card.put("title","PENDING POLL DETAILS");
+	response.put("card",card);
+	slidesList = list();
+	slidesList0 = Map();
+	slidesList0.put("type","table");
+	data = Map();
+	headersList = list();
+	headersList.add("Description");
+	headersList.add("Question");
+	headersList.add("View");
+	data.put("headers",headersList);
+	rows = list();
+	count = 0;
+	available = 0;
+	start = 0;
+	for each  post in share
+	{
+		category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+		if(category == "URN_REFERENCE")
+		{
+			media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+			if(media == "poll")
+			{
+				postid = post.getJSON("id");
+				id = zoho.encryption.urlEncode(postid);
+				getpoll = invokeurl
+				[
+					url :"https://api.linkedin.com/rest/posts/" + id
+					type :GET
+					headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+					detailed:true
+					connection:"linkedin"
+				];
+				published = getpoll.get("responseText").get("publishedAt");
+				publishedDate = toDateTimeString(published,"dd-MMM-y  H:mm:ss","IST");
+				closingDate = "";
+				duration = getpoll.get("responseText").get("content").get("poll").get("settings").get("duration");
+				if(duration.contains("ONE"))
+				{
+					closingDate = publishedDate.addDay(1);
+				}
+				else if(duration.contains("THREE"))
+				{
+					closingDate = publishedDate.addDay(3);
+				}
+				else if(duration.contains("SEVEN"))
+				{
+					closingDate = publishedDate.addDay(7);
+				}
+				else if(duration.contains("FOURTEEN"))
+				{
+					closingDate = publishedDate.addDay(14);
+				}
+				closingDate = toString(closingDate);
+				unixClosingDate = closingDate.unixEpoch("Asia/Calcutta");
+				n = toString(now);
+				unixNowDate = n.unixEpoch("Asia/Calcutta");
+				if(unixNowDate < unixClosingDate)
+				{
+					count = count + 1;
+					question = getpoll.get("responseText").get("content").get("poll").get("question");
+					commentary = getpoll.get("responseText").get("commentary");
+					optionslist = getpoll.get("responseText").get("content").get("poll").get("options");
+					r = Map();
+					r.put("Description",commentary);
+					r.put("Question",question);
+					r.put("View","[View Poll](invoke.function|viewPoll|scott.fisher@zylker.com|" + postid + ")");
+					rows.add(r);
+					start = start + 1;
+					available = available + 1;
+				}
+			}
+			else
+			{
+				start = start + 1;
+			}
+		}
+		else
+		{
+			start = start + 1;
+		}
+	}
+	if(available == 0)
+	{
+		return {"type":"banner","text":"No polls available in your page.","status":"failure"};
+	}
+	info start;
+	s = toString(start);
+	key = key + s + ",";
+	key = key + "pending";
+	info count;
+	data.put("rows",rows);
+	slidesList0.put("data",data);
+	slidesList.add(slidesList0);
+	if(start != total)
+	{
+		encodedorgid = zoho.encryption.urlEncode(orgid);
+		allpost = invokeurl
+		[
+			url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=" + start + "&count=100"
+			type :GET
+			headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+			connection:"linkedin"
+		];
+		info allpost;
+		share = allpost.get("elements");
+		total = allpost.get("paging").get("total");
+		count = 0;
+		available = 0;
+		for each  post in share
+		{
+			category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+			if(category == "URN_REFERENCE")
+			{
+				media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+				if(media == "poll")
+				{
+					postid = post.getJSON("id");
+					id = zoho.encryption.urlEncode(postid);
+					getpoll = invokeurl
+					[
+						url :"https://api.linkedin.com/rest/posts/" + id
+						type :GET
+						headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+						detailed:true
+						connection:"linkedin"
+					];
+					published = getpoll.get("responseText").get("publishedAt");
+					publishedDate = toDateTimeString(published,"dd-MMM-y  H:mm:ss","IST");
+					closingDate = "";
+					duration = getpoll.get("responseText").get("content").get("poll").get("settings").get("duration");
+					if(duration.contains("ONE"))
+					{
+						closingDate = publishedDate.addDay(1);
+					}
+					else if(duration.contains("THREE"))
+					{
+						closingDate = publishedDate.addDay(3);
+					}
+					else if(duration.contains("SEVEN"))
+					{
+						closingDate = publishedDate.addDay(7);
+					}
+					else if(duration.contains("FOURTEEN"))
+					{
+						closingDate = publishedDate.addDay(14);
+					}
+					closingDate = toString(closingDate);
+					unixClosingDate = closingDate.unixEpoch("Asia/Calcutta");
+					n = toString(now);
+					unixNowDate = n.unixEpoch("Asia/Calcutta");
+					if(unixNowDate < unixClosingDate)
+					{
+						count = count + 1;
+						start = start + 1;
+						available = available + 1;
+					}
+				}
+			}
+		}
+		if(available != 0)
+		{
+			buttonsList0 = Map();
+			buttonsList0.put("label","Next");
+			action = Map();
+			action.put("type","invoke.function");
+			data = Map();
+			data.put("name","nextPoll");
+			action.put("data",data);
+			buttonsList0.put("action",action);
+			buttonsList0.put("key",key);
+			buttonsList.add(buttonsList0);
+			slidesList0.put("buttons",buttonsList);
+		}
+	}
+	response.put("slides",slidesList);
+	response.put("navigation",true);
+	return response;
+}
+else if(purpose == "replycomment")
+{
+	comment = form.get("values").get("replycomment");
+	comid = form.get("values").get("comid");
+	orgid = form.get("values").get("orgid");
+	id = zoho.encryption.urlEncode(comid);
+	createcomment = invokeurl
+	[
+		url :"https://api.linkedin.com/rest/socialActions/" + id + "/comments"
+		type :POST
+		parameters:{"actor":orgid,"message":{"text":comment},"parentComment":comid} + ""
+		headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+		detailed:true
+		connection:"linkedin"
+	];
+	info createcomment;
+	if(createcomment.get("responseCode") == 201)
+	{
+		return {"type":"banner","text":"Comment posted successfully","status":"success"};
+	}
+}
+return Map();

@@ -1,0 +1,1638 @@
+
+info form;
+id = form.get("values").get("hidden");
+type = null;
+type = form.get("values").get("radio").get("value");
+info type;
+title = "";
+commentry = "";
+v = form.get("values");
+if(v.containKey("from"))
+{
+	from = v.get("from");
+	info from;
+}
+if(type == null)
+{
+	title = form.get("values").get("title");
+	visibility = form.get("values").get("visibility").get("value");
+	commentry = form.get("values").get("textarea");
+	if(commentry.length() > 3000)
+	{
+		error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"textarea":"Your text has exceeded the 3000-character limit"}};
+		return error;
+	}
+	textshare = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts"
+		type :POST
+		parameters:{"author":id,"lifecycleState":"PUBLISHED","specificContent":{"com.linkedin.ugc.ShareContent":{"shareCommentary":{"text":commentry},"shareMediaCategory":"NONE"}},"visibility":{"com.linkedin.ugc.MemberNetworkVisibility":visibility}} + ""
+		headers:{"X-Restli-Protocol-Version":"2.0.0"}
+		detailed:true
+		connection:"linkedin"
+	];
+	info textshare;
+	postid = textshare.get("responseText").get("id");
+	link = "https://www.linkedin.com/feed/update/" + postid;
+	if(textshare.get("responseCode") == 201)
+	{
+		if(from == "widget")
+		{
+			orgid = id;
+			pageid = orgid.tolist(":").get(3);
+			getcompany = invokeurl
+			[
+				url :"https://api.linkedin.com/rest/organizations/" + pageid
+				type :GET
+				headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+				connection:"linkedin"
+			];
+			info getcompany;
+			pagename = getcompany.get("vanityName");
+			// 				orgid = "urn:li:organization:" + orgid;
+			sections = list();
+			elements = list();
+			encodedorgid = zoho.encryption.urlEncode(orgid);
+			allpost = invokeurl
+			[
+				url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=0&count=100"
+				type :GET
+				headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+				connection:"linkedin"
+			];
+			info allpost;
+			page = 1;
+			buttons = List();
+			buttons.add({"label":"Create Post","type":"invoke.function","name":"changePage","id":orgid});
+			buttons.add({"label":"Change Page","type":"invoke.function","name":"changePage","id":"changepage"});
+			header = {"title":pagename,"buttons":buttons,"navigation":"new"};
+			total = allpost.get("paging").get("total");
+			share = allpost.get("elements");
+			info share.size();
+			total = allpost.get("paging").get("total");
+			available = 0;
+			i = 0;
+			start = 0;
+			for each  post in share
+			{
+				lifecyclestate = post.getJSON("lifecycleState");
+				if(lifecyclestate == "PROCESSING_FAILED" || lifecyclestate == "PROCESSING" || lifecyclestate == "PENDING" || lifecyclestate == "FAILED")
+				{
+					start = start + 1;
+					continue;
+				}
+				category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+				m = "";
+				if(category == "URN_REFERENCE")
+				{
+					m = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+					if(m == "multiPhoto")
+					{
+						commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+						total = total + 1;
+						postid = post.getJSON("id");
+						t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+						t = t.get(0);
+						if(t.containsKey("title"))
+						{
+							title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+						}
+						else
+						{
+							title = "Multi Image Post";
+						}
+						if(title.length() > 1000 || commentary.length() > 500)
+						{
+							if(commentary.length() > 500)
+							{
+								ss = commentary.subString(0,495);
+								ss = ss + "...";
+								commentary = ss;
+							}
+							if(title.length() > 1000)
+							{
+								ss = title.subString(0,995);
+								ss = ss + "...";
+								title = ss;
+							}
+						}
+						ref = postid + "," + orgid;
+						elements.add({"type":"title","text":title});
+						elements.add({"type":"text","text":commentary});
+						elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"},{"label":"View Media Files","type":"invoke.function","id":postid,"name":"viewMediaFiles","emotion":"positive"}}});
+						elements.add({"type":"divider"});
+						start = start + 1;
+						available = available + 1;
+					}
+					else if(m == "poll" || m == "event")
+					{
+						start = start + 1;
+						continue;
+					}
+				}
+				if(category == "IMAGE")
+				{
+					commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+					imgurl = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("originalUrl");
+					postid = post.getJSON("id");
+					t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+					t = t.get(0);
+					if(t.containsKey("title"))
+					{
+						title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+					}
+					else
+					{
+						title = "Post";
+					}
+					if(title.length() > 1000 || commentary.length() > 500)
+					{
+						if(commentary.length() > 500)
+						{
+							ss = commentary.subString(0,495);
+							ss = ss + "...";
+							commentary = ss;
+						}
+						if(title.length() > 1000)
+						{
+							ss = title.subString(0,995);
+							ss = ss + "...";
+							title = ss;
+						}
+					}
+					ref = postid + "," + orgid;
+					data = list();
+					data.add({"url":imgurl,"description":"Sample widget image"});
+					elements.add({"type":"title","text":title});
+					elements.add({"type":"text","text":commentary});
+					elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+					elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+					elements.add({"type":"divider"});
+					available = available + 1;
+					start = start + 1;
+				}
+				else if(category == "VIDEO")
+				{
+					commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+					media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(3);
+					postid = post.getJSON("id");
+					t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+					t = t.get(0);
+					if(t.containsKey("title"))
+					{
+						title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+					}
+					else
+					{
+						title = "Post";
+					}
+					if(title.length() > 1000 || commentary.length() > 500)
+					{
+						if(commentary.length() > 500)
+						{
+							ss = commentary.subString(0,495);
+							ss = ss + "...";
+							commentary = ss;
+						}
+						if(title.length() > 1000)
+						{
+							ss = title.subString(0,995);
+							ss = ss + "...";
+							title = ss;
+						}
+					}
+					getimage = invokeurl
+					[
+						url :"https://api.linkedin.com/rest/videos/urn:li:video:" + media
+						type :GET
+						headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+						connection:"linkedin"
+					];
+					imgurl = getimage.get("thumbnail");
+					ref = postid + "," + orgid;
+					data = list();
+					data.add({"url":imgurl,"description":"Sample widget image"});
+					elements.add({"type":"title","text":title});
+					elements.add({"type":"text","text":commentary});
+					elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+					elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+					elements.add({"type":"divider"});
+					start = start + 1;
+					available = available + 1;
+				}
+				if(category == "ARTICLE")
+				{
+					commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+					articleurl = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("originalUrl");
+					postid = post.getJSON("id");
+					t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+					t = t.get(0);
+					if(t.containsKey("title"))
+					{
+						title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+					}
+					else
+					{
+						title = "Title";
+					}
+					if(commentary.length() > 500 || title.length() > 100)
+					{
+						if(commentary.length() > 500)
+						{
+							ss = commentary.subString(0,495);
+							ss = ss + "...";
+							commentary = ss;
+						}
+						if(title.length() > 100)
+						{
+							ss = title.subString(0,95);
+							ss = ss + "...";
+							title = ss;
+						}
+					}
+					ref = postid + "," + orgid;
+					elements.add({"type":"title","text":title});
+					elements.add({"type":"text","text":commentary});
+					elements.add({"type":"text","text":articleurl});
+					elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+					elements.add({"type":"divider"});
+					start = start + 1;
+					available = available + 1;
+					info commentary;
+					info "article url = " + articleurl;
+				}
+				else if(category == "NONE")
+				{
+					commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+					postid = post.getJSON("id");
+					if(commentary.length() > 500)
+					{
+						ss = commentary.subString(0,494);
+						ss = ss + "...";
+						commentary = ss;
+					}
+					ref = postid + "," + orgid;
+					// 					elements.add({"type":"text","text":"title"});
+					elements.add({"type":"text","text":commentary});
+					elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+					elements.add({"type":"divider"});
+					start = start + 1;
+					available = available + 1;
+				}
+				if(elements.size() >= 16)
+				{
+					sections.add({"id":i,"elements":elements});
+					i = i + 1;
+					elements = list();
+				}
+				if(sections.size() == 25)
+				{
+					if(start == total)
+					{
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+					}
+					l = list();
+					l.add(page);
+					l.add(start);
+					l.add(orgid);
+					buttons = List();
+					buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+					footer = {"text":"","buttons":buttons};
+					return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+				}
+			}
+			if(available == 0)
+			{
+				return {"type":"applet","data_type":"info","tabs":{{"label":"Posts","id":"post"}},"info":{"title":"Don't keep your audience waiting!","description":"Click here to create your first media post.","image_url":"https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/LinkedIn_logo_initials.png/480px-LinkedIn_logo_initials.png","button":{"label":"Create Post","type":"invoke.function","name":"createFirstMediaPost","id":orgid,"emotion":"positive"}},"active_tab":"post"};
+			}
+			if(elements.size() != 0)
+			{
+				sections.add({"id":i,"elements":elements});
+				if(sections.size() == 25 || start == 100)
+				{
+					if(start == total)
+					{
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+					}
+					l = list();
+					l.add(page);
+					l.add(start);
+					l.add(orgid);
+					buttons = List();
+					buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+					footer = {"text":"","buttons":buttons};
+					return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+				}
+			}
+			else if(elements.size() == 0)
+			{
+				if(sections.size() == 25 || start == 100)
+				{
+					info "available = " + available;
+					info "start = " + start;
+					info "elements size = " + elements.size();
+					info "sections  size = " + sections.size();
+					if(start == total)
+					{
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+					}
+					l = list();
+					l.add(page);
+					l.add(start);
+					l.add(orgid);
+					buttons = List();
+					buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+					footer = {"text":"","buttons":buttons};
+					return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+				}
+			}
+			info "available = " + available;
+			info "i = " + i;
+			info "start = " + start;
+			return {"type":"applet","tabs":{{"label":"Posts","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success","type":"success"}};
+		}
+		// 		return {"text":"Post created successfully","type":"banner","status":"success"};
+		response = Map();
+		response.put("text","*TITLE* : " + title + "\n*DESCRIPTION* : " + commentry + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POST CREATED SUCCESSFULLY*\nPOST DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Post");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+else if(type == "image")
+{
+	visibility = form.get("values").get("visibility").get("value");
+	title = form.get("values").get("title");
+	files = form.get("values").get("file");
+	description = "";
+	commentry = form.get("values").get("textarea");
+	if(title.length() > 100)
+	{
+		error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"text":"Your text has exceeded the 100-character limit"}};
+		return error;
+	}
+	if(commentry.length() > 3000)
+	{
+		error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"textarea":"Your text has exceeded the 3000-character limit"}};
+		return error;
+	}
+	if(files.size() == 1)
+	{
+		f = files.get(0);
+		info f;
+		filetype = f.getfiletype();
+		if(!filetype.contains("image"))
+		{
+			error = {"type":"form_error","text":"FILE TYPE MISMATCH","inputs":{"file":"File must be an image."}};
+			return error;
+		}
+		initializeupload = invokeurl
+		[
+			url :"https://api.linkedin.com/rest/images?action=initializeUpload"
+			type :POST
+			parameters:{"initializeUploadRequest":{"owner":id}} + ""
+			headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			connection:"linkedin"
+		];
+		imageurl = initializeupload.get("value").get("uploadUrl");
+		image = initializeupload.get("value").get("image").toList(":").get(3);
+		img = initializeupload.get("value").get("image");
+		file = files.get(0);
+		upload = invokeurl
+		[
+			url :imageurl
+			type :PUT
+			parameters:file
+			headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			detailed:true
+			content-type:"application/octet-stream"
+		];
+		createpost = invokeurl
+		[
+			url :"https://api.linkedin.com/v2/ugcPosts"
+			type :POST
+			parameters:{"author":id,"lifecycleState":"PUBLISHED","specificContent":{"com.linkedin.ugc.ShareContent":{"shareCommentary":{"text":commentry},"shareMediaCategory":"IMAGE","media":{{"status":"READY","description":{"text":description},"media":"urn:li:digitalmediaAsset:" + image,"title":{"text":title}}}}},"visibility":{"com.linkedin.ugc.MemberNetworkVisibility":visibility}} + ""
+			headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			detailed:true
+			connection:"linkedin"
+		];
+		info createpost;
+		postid = createpost.get("responseText").get("id");
+		link = "https://www.linkedin.com/feed/update/" + postid;
+		if(createpost.get("responseCode") == 201)
+		{
+			if(from == "widget")
+			{
+				orgid = id;
+				pageid = orgid.tolist(":").get(3);
+				getcompany = invokeurl
+				[
+					url :"https://api.linkedin.com/rest/organizations/" + pageid
+					type :GET
+					headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+					connection:"linkedin"
+				];
+				info getcompany;
+				pagename = getcompany.get("vanityName");
+				// 				orgid = "urn:li:organization:" + orgid;
+				sections = list();
+				elements = list();
+				encodedorgid = zoho.encryption.urlEncode(orgid);
+				allpost = invokeurl
+				[
+					url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=0&count=100"
+					type :GET
+					headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+					connection:"linkedin"
+				];
+				info allpost;
+				page = 1;
+				buttons = List();
+				buttons.add({"label":"Create Post","type":"invoke.function","name":"changePage","id":orgid});
+				buttons.add({"label":"Change Page","type":"invoke.function","name":"changePage","id":"changepage"});
+				header = {"title":pagename,"buttons":buttons,"navigation":"new"};
+				total = allpost.get("paging").get("total");
+				share = allpost.get("elements");
+				info share.size();
+				total = allpost.get("paging").get("total");
+				available = 0;
+				i = 0;
+				start = 0;
+				for each  post in share
+				{
+					lifecyclestate = post.getJSON("lifecycleState");
+					if(lifecyclestate == "PROCESSING_FAILED" || lifecyclestate == "PROCESSING" || lifecyclestate == "PENDING" || lifecyclestate == "FAILED")
+					{
+						start = start + 1;
+						continue;
+					}
+					category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+					m = "";
+					if(category == "URN_REFERENCE")
+					{
+						m = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+						if(m == "multiPhoto")
+						{
+							commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+							total = total + 1;
+							postid = post.getJSON("id");
+							t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+							t = t.get(0);
+							if(t.containsKey("title"))
+							{
+								title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+							}
+							else
+							{
+								title = "Multi Image Post";
+							}
+							if(title.length() > 1000 || commentary.length() > 500)
+							{
+								if(commentary.length() > 500)
+								{
+									ss = commentary.subString(0,495);
+									ss = ss + "...";
+									commentary = ss;
+								}
+								if(title.length() > 1000)
+								{
+									ss = title.subString(0,995);
+									ss = ss + "...";
+									title = ss;
+								}
+							}
+							ref = postid + "," + orgid;
+							elements.add({"type":"title","text":title});
+							elements.add({"type":"text","text":commentary});
+							elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"},{"label":"View Media Files","type":"invoke.function","id":postid,"name":"viewMediaFiles","emotion":"positive"}}});
+							elements.add({"type":"divider"});
+							start = start + 1;
+							available = available + 1;
+						}
+						else if(m == "poll" || m == "event")
+						{
+							start = start + 1;
+							continue;
+						}
+					}
+					if(category == "IMAGE")
+					{
+						commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+						imgurl = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("originalUrl");
+						postid = post.getJSON("id");
+						t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+						t = t.get(0);
+						if(t.containsKey("title"))
+						{
+							title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+						}
+						else
+						{
+							title = "Post";
+						}
+						if(title.length() > 1000 || commentary.length() > 500)
+						{
+							if(commentary.length() > 500)
+							{
+								ss = commentary.subString(0,495);
+								ss = ss + "...";
+								commentary = ss;
+							}
+							if(title.length() > 1000)
+							{
+								ss = title.subString(0,995);
+								ss = ss + "...";
+								title = ss;
+							}
+						}
+						ref = postid + "," + orgid;
+						data = list();
+						data.add({"url":imgurl,"description":"Sample widget image"});
+						elements.add({"type":"title","text":title});
+						elements.add({"type":"text","text":commentary});
+						elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+						elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+						elements.add({"type":"divider"});
+						available = available + 1;
+						start = start + 1;
+					}
+					else if(category == "VIDEO")
+					{
+						commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+						media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(3);
+						postid = post.getJSON("id");
+						t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+						t = t.get(0);
+						if(t.containsKey("title"))
+						{
+							title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+						}
+						else
+						{
+							title = "Post";
+						}
+						if(title.length() > 1000 || commentary.length() > 500)
+						{
+							if(commentary.length() > 500)
+							{
+								ss = commentary.subString(0,495);
+								ss = ss + "...";
+								commentary = ss;
+							}
+							if(title.length() > 1000)
+							{
+								ss = title.subString(0,995);
+								ss = ss + "...";
+								title = ss;
+							}
+						}
+						getimage = invokeurl
+						[
+							url :"https://api.linkedin.com/rest/videos/urn:li:video:" + media
+							type :GET
+							headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+							connection:"linkedin"
+						];
+						imgurl = getimage.get("thumbnail");
+						ref = postid + "," + orgid;
+						data = list();
+						data.add({"url":imgurl,"description":"Sample widget image"});
+						elements.add({"type":"title","text":title});
+						elements.add({"type":"text","text":commentary});
+						elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+						elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+						elements.add({"type":"divider"});
+						start = start + 1;
+						available = available + 1;
+					}
+					if(category == "ARTICLE")
+					{
+						commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+						articleurl = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("originalUrl");
+						postid = post.getJSON("id");
+						t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+						t = t.get(0);
+						if(t.containsKey("title"))
+						{
+							title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+						}
+						else
+						{
+							title = "Title";
+						}
+						if(commentary.length() > 500 || title.length() > 100)
+						{
+							if(commentary.length() > 500)
+							{
+								ss = commentary.subString(0,495);
+								ss = ss + "...";
+								commentary = ss;
+							}
+							if(title.length() > 100)
+							{
+								ss = title.subString(0,95);
+								ss = ss + "...";
+								title = ss;
+							}
+						}
+						ref = postid + "," + orgid;
+						elements.add({"type":"title","text":title});
+						elements.add({"type":"text","text":commentary});
+						elements.add({"type":"text","text":articleurl});
+						elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+						elements.add({"type":"divider"});
+						start = start + 1;
+						available = available + 1;
+						info commentary;
+						info "article url = " + articleurl;
+					}
+					else if(category == "NONE")
+					{
+						commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+						postid = post.getJSON("id");
+						if(commentary.length() > 500)
+						{
+							ss = commentary.subString(0,494);
+							ss = ss + "...";
+							commentary = ss;
+						}
+						ref = postid + "," + orgid;
+						// 					elements.add({"type":"text","text":"title"});
+						elements.add({"type":"text","text":commentary});
+						elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+						elements.add({"type":"divider"});
+						start = start + 1;
+						available = available + 1;
+					}
+					if(elements.size() >= 16)
+					{
+						sections.add({"id":i,"elements":elements});
+						i = i + 1;
+						elements = list();
+					}
+					if(sections.size() == 25)
+					{
+						if(start == total)
+						{
+							return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+						}
+						l = list();
+						l.add(page);
+						l.add(start);
+						l.add(orgid);
+						buttons = List();
+						buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+						footer = {"text":"","buttons":buttons};
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+					}
+				}
+				if(available == 0)
+				{
+					return {"type":"applet","data_type":"info","tabs":{{"label":"Posts","id":"post"}},"info":{"title":"Don't keep your audience waiting!","description":"Click here to create your first media post.","image_url":"https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/LinkedIn_logo_initials.png/480px-LinkedIn_logo_initials.png","button":{"label":"Create Post","type":"invoke.function","name":"createFirstMediaPost","id":orgid,"emotion":"positive"}},"active_tab":"post"};
+				}
+				if(elements.size() != 0)
+				{
+					sections.add({"id":i,"elements":elements});
+					if(sections.size() == 25 || start == 100)
+					{
+						if(start == total)
+						{
+							return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+						}
+						l = list();
+						l.add(page);
+						l.add(start);
+						l.add(orgid);
+						buttons = List();
+						buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+						footer = {"text":"","buttons":buttons};
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+					}
+				}
+				else if(elements.size() == 0)
+				{
+					if(sections.size() == 25 || start == 100)
+					{
+						info "available = " + available;
+						info "start = " + start;
+						info "elements size = " + elements.size();
+						info "sections  size = " + sections.size();
+						if(start == total)
+						{
+							return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+						}
+						l = list();
+						l.add(page);
+						l.add(start);
+						l.add(orgid);
+						buttons = List();
+						buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+						footer = {"text":"","buttons":buttons};
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+					}
+				}
+				info "available = " + available;
+				info "i = " + i;
+				info "start = " + start;
+				return {"type":"applet","tabs":{{"label":"Posts","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+			}
+			response = Map();
+			response.put("text","*TITLE* : " + title + "\n*DESCRIPTION* : " + commentry + "\n");
+			// 			bot = Map();
+			// 			bot.put("name","Linkedin");
+			// 			response.put("bot",bot);
+			card = Map();
+			card.put("title","*POST CREATED SUCCESSFULLY*\nPOST DETAILS\n");
+			response.put("card",card);
+			buttonsList = list();
+			buttonsList0 = Map();
+			buttonsList0.put("label","View Post");
+			action = Map();
+			action.put("type","open.url");
+			data = Map();
+			data.put("web",link);
+			action.put("data",data);
+			buttonsList0.put("action",action);
+			buttonsList.add(buttonsList0);
+			response.put("buttons",buttonsList);
+			info zoho.cliq.postToBot("linkedinv",response);
+		}
+	}
+	else if(files.size() > 1)
+	{
+		for each  f in files
+		{
+			filetype = f.getfiletype();
+			if(!filetype.contains("image"))
+			{
+				error = {"type":"form_error","text":"FILE TYPE MISMATCH","inputs":{"file":"File must be an image."}};
+				return error;
+			}
+		}
+		urlList = list();
+		idList = list();
+		imageList = list();
+		i = 0;
+		for each  val in files
+		{
+			initializeupload = invokeurl
+			[
+				url :"https://api.linkedin.com/rest/images?action=initializeUpload"
+				type :POST
+				parameters:{"initializeUploadRequest":{"owner":id}} + ""
+				headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+				connection:"linkedin"
+			];
+			imageurl = initializeupload.get("value").get("uploadUrl");
+			urlList.add(imageurl);
+			image = initializeupload.get("value").get("image").toList(":").get(3);
+			img = initializeupload.get("value").get("image");
+			idList.add(img);
+			file = files.get(i);
+			uploadurl = urlList.get(i);
+			upload = invokeurl
+			[
+				url :uploadurl
+				type :PUT
+				parameters:file
+				headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+				detailed:true
+				content-type:"application/octet-stream"
+			];
+			imageList.add({"id":idList.get(i)});
+			i = i + 1;
+		}
+		createpost = invokeurl
+		[
+			url :"https://api.linkedin.com/rest/posts"
+			type :POST
+			parameters:{"author":id,"commentary":commentry,"visibility":visibility,"distribution":{"feedDistribution":"MAIN_FEED","targetEntities":{},"thirdPartyDistributionChannels":{}},"lifecycleState":"PUBLISHED","isReshareDisabledByAuthor":false,"content":{"multiImage":{"images":imageList}}} + ""
+			headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304","Content-Type":"application/json"}
+			detailed:true
+			connection:"linkedin"
+		];
+		info createpost;
+		postid = createpost.get("responseHeader").get("x-linkedin-id");
+		link = "https://www.linkedin.com/feed/update/" + postid;
+		if(createpost.get("responseCode") == 201)
+		{
+			if(from == "widget")
+			{
+				orgid = id;
+				pageid = orgid.tolist(":").get(3);
+				getcompany = invokeurl
+				[
+					url :"https://api.linkedin.com/rest/organizations/" + pageid
+					type :GET
+					headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+					connection:"linkedin"
+				];
+				info getcompany;
+				pagename = getcompany.get("vanityName");
+				// 				orgid = "urn:li:organization:" + orgid;
+				sections = list();
+				elements = list();
+				encodedorgid = zoho.encryption.urlEncode(orgid);
+				allpost = invokeurl
+				[
+					url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=0&count=100"
+					type :GET
+					headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+					connection:"linkedin"
+				];
+				info allpost;
+				page = 1;
+				buttons = List();
+				buttons.add({"label":"Create Post","type":"invoke.function","name":"changePage","id":orgid});
+				buttons.add({"label":"Change Page","type":"invoke.function","name":"changePage","id":"changepage"});
+				header = {"title":pagename,"buttons":buttons,"navigation":"new"};
+				total = allpost.get("paging").get("total");
+				share = allpost.get("elements");
+				info share.size();
+				total = allpost.get("paging").get("total");
+				available = 0;
+				i = 0;
+				start = 0;
+				for each  post in share
+				{
+					lifecyclestate = post.getJSON("lifecycleState");
+					if(lifecyclestate == "PROCESSING_FAILED" || lifecyclestate == "PROCESSING" || lifecyclestate == "PENDING" || lifecyclestate == "FAILED")
+					{
+						start = start + 1;
+						continue;
+					}
+					category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+					m = "";
+					if(category == "URN_REFERENCE")
+					{
+						m = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+						if(m == "multiPhoto")
+						{
+							commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+							total = total + 1;
+							postid = post.getJSON("id");
+							t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+							t = t.get(0);
+							if(t.containsKey("title"))
+							{
+								title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+							}
+							else
+							{
+								title = "Multi Image Post";
+							}
+							if(title.length() > 1000 || commentary.length() > 500)
+							{
+								if(commentary.length() > 500)
+								{
+									ss = commentary.subString(0,495);
+									ss = ss + "...";
+									commentary = ss;
+								}
+								if(title.length() > 1000)
+								{
+									ss = title.subString(0,995);
+									ss = ss + "...";
+									title = ss;
+								}
+							}
+							ref = postid + "," + orgid;
+							elements.add({"type":"title","text":title});
+							elements.add({"type":"text","text":commentary});
+							elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"},{"label":"View Media Files","type":"invoke.function","id":postid,"name":"viewMediaFiles","emotion":"positive"}}});
+							elements.add({"type":"divider"});
+							start = start + 1;
+							available = available + 1;
+						}
+						else if(m == "poll" || m == "event")
+						{
+							start = start + 1;
+							continue;
+						}
+					}
+					if(category == "IMAGE")
+					{
+						commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+						imgurl = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("originalUrl");
+						postid = post.getJSON("id");
+						t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+						t = t.get(0);
+						if(t.containsKey("title"))
+						{
+							title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+						}
+						else
+						{
+							title = "Post";
+						}
+						if(title.length() > 1000 || commentary.length() > 500)
+						{
+							if(commentary.length() > 500)
+							{
+								ss = commentary.subString(0,495);
+								ss = ss + "...";
+								commentary = ss;
+							}
+							if(title.length() > 1000)
+							{
+								ss = title.subString(0,995);
+								ss = ss + "...";
+								title = ss;
+							}
+						}
+						ref = postid + "," + orgid;
+						data = list();
+						data.add({"url":imgurl,"description":"Sample widget image"});
+						elements.add({"type":"title","text":title});
+						elements.add({"type":"text","text":commentary});
+						elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+						elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+						elements.add({"type":"divider"});
+						available = available + 1;
+						start = start + 1;
+					}
+					else if(category == "VIDEO")
+					{
+						commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+						media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(3);
+						postid = post.getJSON("id");
+						t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+						t = t.get(0);
+						if(t.containsKey("title"))
+						{
+							title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+						}
+						else
+						{
+							title = "Post";
+						}
+						if(title.length() > 1000 || commentary.length() > 500)
+						{
+							if(commentary.length() > 500)
+							{
+								ss = commentary.subString(0,495);
+								ss = ss + "...";
+								commentary = ss;
+							}
+							if(title.length() > 1000)
+							{
+								ss = title.subString(0,995);
+								ss = ss + "...";
+								title = ss;
+							}
+						}
+						getimage = invokeurl
+						[
+							url :"https://api.linkedin.com/rest/videos/urn:li:video:" + media
+							type :GET
+							headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+							connection:"linkedin"
+						];
+						imgurl = getimage.get("thumbnail");
+						ref = postid + "," + orgid;
+						data = list();
+						data.add({"url":imgurl,"description":"Sample widget image"});
+						elements.add({"type":"title","text":title});
+						elements.add({"type":"text","text":commentary});
+						elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+						elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+						elements.add({"type":"divider"});
+						start = start + 1;
+						available = available + 1;
+					}
+					if(category == "ARTICLE")
+					{
+						commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+						articleurl = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("originalUrl");
+						postid = post.getJSON("id");
+						t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+						t = t.get(0);
+						if(t.containsKey("title"))
+						{
+							title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+						}
+						else
+						{
+							title = "Title";
+						}
+						if(commentary.length() > 500 || title.length() > 100)
+						{
+							if(commentary.length() > 500)
+							{
+								ss = commentary.subString(0,495);
+								ss = ss + "...";
+								commentary = ss;
+							}
+							if(title.length() > 100)
+							{
+								ss = title.subString(0,95);
+								ss = ss + "...";
+								title = ss;
+							}
+						}
+						ref = postid + "," + orgid;
+						elements.add({"type":"title","text":title});
+						elements.add({"type":"text","text":commentary});
+						elements.add({"type":"text","text":articleurl});
+						elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+						elements.add({"type":"divider"});
+						start = start + 1;
+						available = available + 1;
+						info commentary;
+						info "article url = " + articleurl;
+					}
+					else if(category == "NONE")
+					{
+						commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+						postid = post.getJSON("id");
+						if(commentary.length() > 500)
+						{
+							ss = commentary.subString(0,494);
+							ss = ss + "...";
+							commentary = ss;
+						}
+						ref = postid + "," + orgid;
+						// 					elements.add({"type":"text","text":"title"});
+						elements.add({"type":"text","text":commentary});
+						elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+						elements.add({"type":"divider"});
+						start = start + 1;
+						available = available + 1;
+					}
+					if(elements.size() >= 16)
+					{
+						sections.add({"id":i,"elements":elements});
+						i = i + 1;
+						elements = list();
+					}
+					if(sections.size() == 25)
+					{
+						if(start == total)
+						{
+							return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+						}
+						l = list();
+						l.add(page);
+						l.add(start);
+						l.add(orgid);
+						buttons = List();
+						buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+						footer = {"text":"","buttons":buttons};
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+					}
+				}
+				if(available == 0)
+				{
+					return {"type":"applet","data_type":"info","tabs":{{"label":"Posts","id":"post"}},"info":{"title":"Don't keep your audience waiting!","description":"Click here to create your first media post.","image_url":"https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/LinkedIn_logo_initials.png/480px-LinkedIn_logo_initials.png","button":{"label":"Create Post","type":"invoke.function","name":"createFirstMediaPost","id":orgid,"emotion":"positive"}},"active_tab":"post"};
+				}
+				if(elements.size() != 0)
+				{
+					sections.add({"id":i,"elements":elements});
+					if(sections.size() == 25 || start == 100)
+					{
+						if(start == total)
+						{
+							return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+						}
+						l = list();
+						l.add(page);
+						l.add(start);
+						l.add(orgid);
+						buttons = List();
+						buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+						footer = {"text":"","buttons":buttons};
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+					}
+				}
+				else if(elements.size() == 0)
+				{
+					if(sections.size() == 25 || start == 100)
+					{
+						info "available = " + available;
+						info "start = " + start;
+						info "elements size = " + elements.size();
+						info "sections  size = " + sections.size();
+						if(start == total)
+						{
+							return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+						}
+						l = list();
+						l.add(page);
+						l.add(start);
+						l.add(orgid);
+						buttons = List();
+						buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+						footer = {"text":"","buttons":buttons};
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+					}
+				}
+				info "available = " + available;
+				info "i = " + i;
+				info "start = " + start;
+				return {"type":"applet","tabs":{{"label":"Posts","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+			}
+			response = Map();
+			response.put("text","*TITLE* : " + title + "\n*DESCRIPTION* : " + commentry + "\n");
+			// 			bot = Map();
+			// 			bot.put("name","Linkedin");
+			// 			response.put("bot",bot);
+			card = Map();
+			card.put("title","*POST CREATED SUCCESSFULLY*\nPOST DETAILS\n");
+			response.put("card",card);
+			buttonsList = list();
+			buttonsList0 = Map();
+			buttonsList0.put("label","View Post");
+			action = Map();
+			action.put("type","open.url");
+			data = Map();
+			data.put("web",link);
+			action.put("data",data);
+			buttonsList0.put("action",action);
+			buttonsList.add(buttonsList0);
+			response.put("buttons",buttonsList);
+			info zoho.cliq.postToBot("linkedinv",response);
+		}
+	}
+}
+else if(type == "video")
+{
+	visibility = form.get("values").get("visibility").get("value");
+	file = form.get("values").get("file");
+	filetype = file.getfiletype();
+	if(!filetype.contains("video"))
+	{
+		error = {"type":"form_error","text":"FILE TYPE MISMATCH","inputs":{"file":"File must be a video."}};
+		return error;
+	}
+	size = file.getFileSize();
+	if(size > 4194303 || size == null)
+	{
+		return {"type":"form_error","text":"INVALID INPUT","inputs":{"file":"File size exceeds the maximum limit of 4MB."}};
+	}
+	title = form.get("values").get("title");
+	commentry = form.get("values").get("textarea");
+	if(title.length() > 100)
+	{
+		error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"text":"Your text has exceeded the 100-character limit"}};
+		return error;
+	}
+	if(commentry.length() > 3000)
+	{
+		error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"textarea":"Your text has exceeded the 3000-character limit"}};
+		return error;
+	}
+	description = "";
+	uploadinitialize = invokeurl
+	[
+		url :"https://api.linkedin.com/rest/videos?action=initializeUpload"
+		type :POST
+		parameters:{"initializeUploadRequest":{"owner":id,"fileSizeBytes":size,"uploadCaptions":false,"uploadThumbnail":false}} + ""
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+		connection:"linkedin"
+	];
+	video = uploadinitialize.get("value").get("video");
+	url = uploadinitialize.get("value").get("uploadInstructions").getJSON("uploadUrl");
+	upload = invokeurl
+	[
+		url :url
+		type :POST
+		parameters:file
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+		detailed:true
+		connection:"linkedin"
+		content-type:"application/octet-stream"
+	];
+	etag = upload.get("responseHeader").get("etag");
+	final = invokeurl
+	[
+		url :"https://api.linkedin.com/rest/videos?action=finalizeUpload"
+		type :POST
+		parameters:{"finalizeUploadRequest":{"video":video,"uploadToken":"","uploadedPartIds":{etag}}} + ""
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+		detailed:true
+		connection:"linkedin"
+	];
+	asset = uploadinitialize.get("value").get("video").toList(":").get(3);
+	videopost = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts"
+		type :POST
+		parameters:{"author":id,"lifecycleState":"PUBLISHED","specificContent":{"com.linkedin.ugc.ShareContent":{"shareCommentary":{"text":commentry},"shareMediaCategory":"VIDEO","media":{{"status":"READY","description":{"text":description},"media":"urn:li:digitalmediaAsset:" + asset,"title":{"text":title}}}}},"visibility":{"com.linkedin.ugc.MemberNetworkVisibility":visibility}} + ""
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+		detailed:true
+		connection:"linkedin"
+	];
+	info videopost;
+	postid = videopost.get("responseText").get("id");
+	link = "https://www.linkedin.com/feed/update/" + postid;
+	info link;
+	if(videopost.get("responseCode") == 201)
+	{
+		// 		return {"text":"Post created successfully","type":"banner","status":"success"};
+		response = Map();
+		response.put("text","*TITLE* : " + title + "\n*DESCRIPTION* : " + commentry + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POST CREATED SUCCESSFULLY*\nPOST DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Post");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+else if(type == "article")
+{
+	visibility = form.get("values").get("visibility").get("value");
+	description = "";
+	title = form.get("values").get("title");
+	commentry = form.get("values").get("textarea");
+	if(title.length() > 100)
+	{
+		error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"text":"Your text has exceeded the 100-character limit"}};
+		return error;
+	}
+	if(commentry.length() > 3000)
+	{
+		error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"textarea":"Your text has exceeded the 3000-character limit"}};
+		return error;
+	}
+	url = form.get("values").get("url");
+	articleshare = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts"
+		type :POST
+		parameters:{"author":id,"lifecycleState":"PUBLISHED","specificContent":{"com.linkedin.ugc.ShareContent":{"shareCommentary":{"text":commentry},"shareMediaCategory":"ARTICLE","media":{{"status":"READY","description":{"text":description},"originalUrl":url,"title":{"text":title}}}}},"visibility":{"com.linkedin.ugc.MemberNetworkVisibility":visibility}} + ""
+		headers:{"X-Restli-Protocol-Version":"2.0.0"}
+		detailed:true
+		connection:"linkedin"
+	];
+	info articleshare;
+	postid = articleshare.get("responseText").get("id");
+	link = "https://www.linkedin.com/feed/update/" + postid;
+	if(articleshare.get("responseCode") == 201)
+	{
+		if(from == "widget")
+		{
+			orgid = id;
+			pageid = orgid.tolist(":").get(3);
+			getcompany = invokeurl
+			[
+				url :"https://api.linkedin.com/rest/organizations/" + pageid
+				type :GET
+				headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+				connection:"linkedin"
+			];
+			info getcompany;
+			pagename = getcompany.get("vanityName");
+			// 				orgid = "urn:li:organization:" + orgid;
+			sections = list();
+			elements = list();
+			encodedorgid = zoho.encryption.urlEncode(orgid);
+			allpost = invokeurl
+			[
+				url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=0&count=100"
+				type :GET
+				headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+				connection:"linkedin"
+			];
+			info allpost;
+			page = 1;
+			buttons = List();
+			buttons.add({"label":"Create Post","type":"invoke.function","name":"changePage","id":orgid});
+			buttons.add({"label":"Change Page","type":"invoke.function","name":"changePage","id":"changepage"});
+			header = {"title":pagename,"buttons":buttons,"navigation":"new"};
+			total = allpost.get("paging").get("total");
+			share = allpost.get("elements");
+			info share.size();
+			total = allpost.get("paging").get("total");
+			available = 0;
+			i = 0;
+			start = 0;
+			for each  post in share
+			{
+				lifecyclestate = post.getJSON("lifecycleState");
+				if(lifecyclestate == "PROCESSING_FAILED" || lifecyclestate == "PROCESSING" || lifecyclestate == "PENDING" || lifecyclestate == "FAILED")
+				{
+					start = start + 1;
+					continue;
+				}
+				category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+				m = "";
+				if(category == "URN_REFERENCE")
+				{
+					m = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+					if(m == "multiPhoto")
+					{
+						commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+						total = total + 1;
+						postid = post.getJSON("id");
+						t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+						t = t.get(0);
+						if(t.containsKey("title"))
+						{
+							title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+						}
+						else
+						{
+							title = "Multi Image Post";
+						}
+						if(title.length() > 1000 || commentary.length() > 500)
+						{
+							if(commentary.length() > 500)
+							{
+								ss = commentary.subString(0,495);
+								ss = ss + "...";
+								commentary = ss;
+							}
+							if(title.length() > 1000)
+							{
+								ss = title.subString(0,995);
+								ss = ss + "...";
+								title = ss;
+							}
+						}
+						ref = postid + "," + orgid;
+						elements.add({"type":"title","text":title});
+						elements.add({"type":"text","text":commentary});
+						elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"},{"label":"View Media Files","type":"invoke.function","id":postid,"name":"viewMediaFiles","emotion":"positive"}}});
+						elements.add({"type":"divider"});
+						start = start + 1;
+						available = available + 1;
+					}
+					else if(m == "poll" || m == "event")
+					{
+						start = start + 1;
+						continue;
+					}
+				}
+				if(category == "IMAGE")
+				{
+					commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+					imgurl = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("originalUrl");
+					postid = post.getJSON("id");
+					t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+					t = t.get(0);
+					if(t.containsKey("title"))
+					{
+						title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+					}
+					else
+					{
+						title = "Post";
+					}
+					if(title.length() > 1000 || commentary.length() > 500)
+					{
+						if(commentary.length() > 500)
+						{
+							ss = commentary.subString(0,495);
+							ss = ss + "...";
+							commentary = ss;
+						}
+						if(title.length() > 1000)
+						{
+							ss = title.subString(0,995);
+							ss = ss + "...";
+							title = ss;
+						}
+					}
+					ref = postid + "," + orgid;
+					data = list();
+					data.add({"url":imgurl,"description":"Sample widget image"});
+					elements.add({"type":"title","text":title});
+					elements.add({"type":"text","text":commentary});
+					elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+					elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+					elements.add({"type":"divider"});
+					available = available + 1;
+					start = start + 1;
+				}
+				else if(category == "VIDEO")
+				{
+					commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+					media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(3);
+					postid = post.getJSON("id");
+					t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+					t = t.get(0);
+					if(t.containsKey("title"))
+					{
+						title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+					}
+					else
+					{
+						title = "Post";
+					}
+					if(title.length() > 1000 || commentary.length() > 500)
+					{
+						if(commentary.length() > 500)
+						{
+							ss = commentary.subString(0,495);
+							ss = ss + "...";
+							commentary = ss;
+						}
+						if(title.length() > 1000)
+						{
+							ss = title.subString(0,995);
+							ss = ss + "...";
+							title = ss;
+						}
+					}
+					getimage = invokeurl
+					[
+						url :"https://api.linkedin.com/rest/videos/urn:li:video:" + media
+						type :GET
+						headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+						connection:"linkedin"
+					];
+					imgurl = getimage.get("thumbnail");
+					ref = postid + "," + orgid;
+					data = list();
+					data.add({"url":imgurl,"description":"Sample widget image"});
+					elements.add({"type":"title","text":title});
+					elements.add({"type":"text","text":commentary});
+					elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+					elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+					elements.add({"type":"divider"});
+					start = start + 1;
+					available = available + 1;
+				}
+				if(category == "ARTICLE")
+				{
+					commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+					articleurl = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("originalUrl");
+					postid = post.getJSON("id");
+					t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+					t = t.get(0);
+					if(t.containsKey("title"))
+					{
+						title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+					}
+					else
+					{
+						title = "Title";
+					}
+					if(commentary.length() > 500 || title.length() > 100)
+					{
+						if(commentary.length() > 500)
+						{
+							ss = commentary.subString(0,495);
+							ss = ss + "...";
+							commentary = ss;
+						}
+						if(title.length() > 100)
+						{
+							ss = title.subString(0,95);
+							ss = ss + "...";
+							title = ss;
+						}
+					}
+					ref = postid + "," + orgid;
+					elements.add({"type":"title","text":title});
+					elements.add({"type":"text","text":commentary});
+					elements.add({"type":"text","text":articleurl});
+					elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+					elements.add({"type":"divider"});
+					start = start + 1;
+					available = available + 1;
+					info commentary;
+					info "article url = " + articleurl;
+				}
+				else if(category == "NONE")
+				{
+					commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+					postid = post.getJSON("id");
+					if(commentary.length() > 500)
+					{
+						ss = commentary.subString(0,494);
+						ss = ss + "...";
+						commentary = ss;
+					}
+					ref = postid + "," + orgid;
+					// 					elements.add({"type":"text","text":"title"});
+					elements.add({"type":"text","text":commentary});
+					elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+					elements.add({"type":"divider"});
+					start = start + 1;
+					available = available + 1;
+				}
+				if(elements.size() >= 16)
+				{
+					sections.add({"id":i,"elements":elements});
+					i = i + 1;
+					elements = list();
+				}
+				if(sections.size() == 25)
+				{
+					if(start == total)
+					{
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+					}
+					l = list();
+					l.add(page);
+					l.add(start);
+					l.add(orgid);
+					buttons = List();
+					buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+					footer = {"text":"","buttons":buttons};
+					return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+				}
+			}
+			if(available == 0)
+			{
+				return {"type":"applet","data_type":"info","tabs":{{"label":"Posts","id":"post"}},"info":{"title":"Don't keep your audience waiting!","description":"Click here to create your first media post.","image_url":"https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/LinkedIn_logo_initials.png/480px-LinkedIn_logo_initials.png","button":{"label":"Create Post","type":"invoke.function","name":"createFirstMediaPost","id":orgid,"emotion":"positive"}},"active_tab":"post"};
+			}
+			if(elements.size() != 0)
+			{
+				sections.add({"id":i,"elements":elements});
+				if(sections.size() == 25 || start == 100)
+				{
+					if(start == total)
+					{
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+					}
+					l = list();
+					l.add(page);
+					l.add(start);
+					l.add(orgid);
+					buttons = List();
+					buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+					footer = {"text":"","buttons":buttons};
+					return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+				}
+			}
+			else if(elements.size() == 0)
+			{
+				if(sections.size() == 25 || start == 100)
+				{
+					info "available = " + available;
+					info "start = " + start;
+					info "elements size = " + elements.size();
+					info "sections  size = " + sections.size();
+					if(start == total)
+					{
+						return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+					}
+					l = list();
+					l.add(page);
+					l.add(start);
+					l.add(orgid);
+					buttons = List();
+					buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+					footer = {"text":"","buttons":buttons};
+					return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer,"status":{"text":"Post created successfully","type":"success"}};
+				}
+			}
+			info "available = " + available;
+			info "i = " + i;
+			info "start = " + start;
+			return {"type":"applet","tabs":{{"label":"Posts","id":"post"}},"active_tab":"post","sections":sections,"header":header,"status":{"text":"Post created successfully","type":"success"}};
+		}
+		// 		return {"text":"Post created successfully","type":"banner","status":"success"};
+		response = Map();
+		response.put("text","*TITLE* : " + title + "\n*DESCRIPTION* : " + commentry + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POST CREATED SUCCESSFULLY*\nPOST DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Post");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+return Map();

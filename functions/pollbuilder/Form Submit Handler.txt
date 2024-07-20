@@ -1,0 +1,267 @@
+info form;
+values = form.get("values");
+commentry = values.get("commentry");
+if(commentry.length() > 3000)
+{
+	error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"commentry":commentry.length() + "/3000"}};
+	return error;
+}
+question = values.get("question");
+if(question.length() > 140)
+{
+	error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"question":question.length() + "/140"}};
+	return error;
+}
+duration = values.get("duration").get("value");
+total = values.get("option").get("value");
+id = values.get("id");
+d = "days";
+if(duration == 1)
+{
+	dur = "ONE_DAY";
+	d = "day";
+}
+else if(duration == 3)
+{
+	dur = "THREE_DAYS";
+}
+else if(duration == 7)
+{
+	dur = "SEVEN_DAYS";
+}
+else if(duration == 14)
+{
+	dur = "FOURTEEN_DAYS";
+}
+if(total == 2)
+{
+	opt1 = tostring(values.get("option-1"));
+	if(opt1.length() > 30)
+	{
+		error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"option-1":"Maximum character limit reached [30]"}};
+		return error;
+	}
+	opt2 = tostring(values.get("option-2"));
+	if(opt2.length() > 30)
+	{
+		error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"option-2":"Maximum character limit reached [30]"}};
+		return error;
+	}
+	if(opt1 == opt2)
+	{
+		error = {"type":"form_error","text":"DUPLICATE OPTION FOUND","inputs":{"option-2":"Option must be unique"}};
+		return error;
+	}
+	opt = list();
+	opt.add({"text":opt1});
+	opt.add({"text":opt2});
+	createpoll = invokeurl
+	[
+		url :"https://api.linkedin.com/rest/posts"
+		type :POST
+		parameters:{"author":id,"commentary":commentry,"visibility":"PUBLIC","distribution":{"feedDistribution":"MAIN_FEED","targetEntities":{},"thirdPartyDistributionChannels":{}},"lifecycleState":"PUBLISHED","isReshareDisabledByAuthor":false,"content":{"poll":{"question":question,"options":opt,"settings":{"duration":dur}}}} + ""
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304","Content-Type":"application/json"}
+		detailed:true
+		connection:"linkedin"
+	];
+	info createpoll;
+	if(createpoll.get("responseCode") == 201)
+	{
+		info createpoll;
+		pollid = createpoll.get("responseHeader").get("x-linkedin-id");
+		link = "https://www.linkedin.com/feed/update/" + pollid;
+		response = Map();
+		response.put("text","*DESCRIPTION* : " + commentry + "\n*QUESTION* : " + question + "\n*DURATION* : " + duration + " " + d + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POLL CREATED SUCCESSFULLY*\nPOLL DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Poll");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+else if(total == 3)
+{
+	opt1 = tostring(values.get("option-1"));
+	if(opt1.length() > 30)
+	{
+		error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"option-1":"Maximum character limit reached [30]"}};
+		return error;
+	}
+	opt2 = tostring(values.get("option-2"));
+	if(opt2.length() > 30)
+	{
+		error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"option-2":"Maximum character limit reached [30]"}};
+		return error;
+	}
+	opt3 = tostring(values.get("option-3"));
+	if(opt3.length() > 30)
+	{
+		error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"option-3":"Maximum character limit reached [30]"}};
+		return error;
+	}
+	if(opt1 == opt2)
+	{
+		error = {"type":"form_error","text":"DUPLICATE OPTION FOUND","inputs":{"option-2":"Option must be unique"}};
+		return error;
+	}
+	if(opt1 == opt3)
+	{
+		error = {"type":"form_error","text":"DUPLICATE OPTION FOUND","inputs":{"option-3":"Option must be unique"}};
+		return error;
+	}
+	if(opt2 == opt3)
+	{
+		error = {"type":"form_error","text":"DUPLICATE OPTION FOUND","inputs":{"option-3":"Option must be unique"}};
+		return error;
+	}
+	opt = list();
+	opt.add({"text":opt1});
+	opt.add({"text":opt2});
+	opt.add({"text":opt3});
+	createpoll = invokeurl
+	[
+		url :"https://api.linkedin.com/rest/posts"
+		type :POST
+		parameters:{"author":id,"commentary":commentry,"visibility":"PUBLIC","distribution":{"feedDistribution":"MAIN_FEED","targetEntities":{},"thirdPartyDistributionChannels":{}},"lifecycleState":"PUBLISHED","isReshareDisabledByAuthor":false,"content":{"poll":{"question":question,"options":opt,"settings":{"duration":dur}}}} + ""
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304","Content-Type":"application/json"}
+		detailed:true
+		connection:"linkedin"
+	];
+	info createpoll;
+	if(createpoll.get("responseCode") == 201)
+	{
+		pollid = createpoll.get("responseHeader").get("x-linkedin-id");
+		link = "https://www.linkedin.com/feed/update/" + pollid;
+		response = Map();
+		response.put("text","*DESCRIPTION* : " + commentry + "\n*QUESTION* : " + question + "\n*DURATION* : " + duration + " " + d + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POLL CREATED SUCCESSFULLY*\nPOLL DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Poll");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+else if(total == 4)
+{
+	opt1 = tostring(values.get("option-1"));
+	if(opt1.length() > 30)
+	{
+		error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"option-1":"Maximum character limit reached [30]"}};
+		return error;
+	}
+	opt2 = tostring(values.get("option-2"));
+	if(opt2.length() > 30)
+	{
+		error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"option-2":"Maximum character limit reached [30]"}};
+		return error;
+	}
+	opt3 = tostring(values.get("option-3"));
+	if(opt3.length() > 30)
+	{
+		error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"option-3":"Maximum character limit reached [30]"}};
+		return error;
+	}
+	opt4 = tostring(values.get("option-4"));
+	if(opt4.length() > 30)
+	{
+		error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"option-4":"Maximum character limit reached [30]"}};
+		return error;
+	}
+	if(opt1 == opt2)
+	{
+		error = {"type":"form_error","text":"DUPLICATE OPTION FOUND","inputs":{"option-2":"Option must be unique"}};
+		return error;
+	}
+	if(opt1 == opt3)
+	{
+		error = {"type":"form_error","text":"DUPLICATE OPTION FOUND","inputs":{"option-3":"Option must be unique"}};
+		return error;
+	}
+	if(opt1 == opt4)
+	{
+		error = {"type":"form_error","text":"DUPLICATE OPTION FOUND","inputs":{"option-4":"Option must be unique"}};
+		return error;
+	}
+	if(opt2 == opt3)
+	{
+		error = {"type":"form_error","text":"DUPLICATE OPTION FOUND","inputs":{"option-3":"Option must be unique"}};
+		return error;
+	}
+	if(opt2 == opt4)
+	{
+		error = {"type":"form_error","text":"DUPLICATE OPTION FOUND","inputs":{"option-4":"Option must be unique"}};
+		return error;
+	}
+	if(opt3 == opt4)
+	{
+		error = {"type":"form_error","text":"DUPLICATE OPTION FOUND","inputs":{"option-4":"Option must be unique"}};
+		return error;
+	}
+	opt = list();
+	opt.add({"text":opt1});
+	opt.add({"text":opt2});
+	opt.add({"text":opt3});
+	opt.add({"text":opt4});
+	createpoll = invokeurl
+	[
+		url :"https://api.linkedin.com/rest/posts"
+		type :POST
+		parameters:{"author":id,"commentary":commentry,"visibility":"PUBLIC","distribution":{"feedDistribution":"MAIN_FEED","targetEntities":{},"thirdPartyDistributionChannels":{}},"lifecycleState":"PUBLISHED","isReshareDisabledByAuthor":false,"content":{"poll":{"question":question,"options":opt,"settings":{"duration":dur}}}} + ""
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304","Content-Type":"application/json"}
+		detailed:true
+		connection:"linkedin"
+	];
+	info createpoll;
+	if(createpoll.get("responseCode") == 201)
+	{
+		pollid = createpoll.get("responseHeader").get("x-linkedin-id");
+		link = "https://www.linkedin.com/feed/update/" + pollid;
+		response = Map();
+		response.put("text","*DESCRIPTION* : " + commentry + "\n*QUESTION* : " + question + "\n*DURATION* : " + duration + " " + d + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POLL CREATED SUCCESSFULLY*\nPOLL DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Poll");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+return Map();

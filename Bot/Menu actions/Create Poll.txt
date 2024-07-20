@@ -1,0 +1,50 @@
+if(sub_action.equalsIgnoreCase("Personal"))
+{
+	response = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/me"
+		type :GET
+		connection:"linkedin"
+	];
+	person_id = response.get("id");
+	id = "urn:li:person:" + person_id;
+	response = {"type":"form","title":"POLL DETAILS","name":"poll","button_label":"Post","inputs":{{"label":"Question","name":"question","placeholder":"Question of your poll  ","min_length":"0","max_length":"3000","mandatory":true,"type":"textarea"},{"label":"About","name":"commentry","placeholder":"What do you want to talk about?  ","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"},{"label":"No of options","name":"option","mandatory":true,"type":"radio","trigger_on_change":true,"options":{{"value":"2","label":"2"},{"value":"3","label":"3"},{"value":"4","label":"4"}}},{"label":"Duration of the poll","name":"duration","mandatory":true,"type":"radio","trigger_on_change":true,"options":{{"value":"1","label":"1 day"},{"value":"3","label":"3 days"},{"value":"7","label":" 7 days"},{"value":"14","label":"14 days"}}},{"name":"id","value":id,"type":"hidden"}},"action":{"type":"invoke.function","name":"pollbuilder"}};
+	return response;
+}
+else if(sub_action.equalsIgnoreCase("Organization"))
+{
+	orgdetails = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/organizationAcls?q=roleAssignee"
+		type :GET
+		headers:{"X-Restli-Protocol-Version":"2.0.0"}
+		connection:"linkedin"
+	];
+	org = orgdetails.get("elements");
+	orglist = list();
+	for each  e in org
+	{
+		orglist.add(e.getJSON("organization"));
+	}
+	if(orglist.size() == 0)
+	{
+		return {"text":"You don't have any pages. Create a page","type":"banner","status":"failure"};
+	}
+	idlist = list();
+	for each  id in orglist
+	{
+		o = id.toList(":").get(3);
+		getinfo = invokeurl
+		[
+			url :"https://api.linkedin.com/rest/organizations/" + o
+			type :GET
+			headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			connection:"linkedin"
+		];
+		name = getinfo.get("vanityName");
+		idlist.add({"label":name,"value":o});
+	}
+	res = {"type":"form","title":"PAGE DETAILS","name":"pagedetail","button_label":"Submit","inputs":{{"label":"Select the organization page","name":"select","placeholder":"Select the page on which you would like to create a poll","multiple":false,"mandatory":true,"type":"select","options":idlist},{"name":"for","value":"createpoll","type":"hidden"}},"action":{"type":"invoke.function","name":"OrgIdForLinkedin"}};
+	return res;
+}
+return Map();

@@ -1,0 +1,11 @@
+info target;
+reference = target.get("id").toString();
+id = reference.toList('"').get(1);
+orgid = reference.toList('"').get(3);
+info reference;
+id = id.toString();
+info id;
+orgid = orgid.toString();
+info orgid;
+form = {"type":"form","title":"REPLY COMMENT","name":"replycomment","button_label":"Post","inputs":{{"label":"Share your reply","name":"replycomment","placeholder":"Share your reply....","min_length":"0","max_length":"1250","mandatory":false,"type":"textarea"},{"name":"for","value":"replycomment","type":"hidden"},{"name":"comid","value":id,"type":"hidden"},{"name":"orgid","value":orgid,"type":"hidden"}},"action":{"type":"invoke.function","name":"OrgIdForLinkedin"}};
+return form;

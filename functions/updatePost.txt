@@ -1,0 +1,324 @@
+text = form.get("values").get("textarea");
+if(text.length() > 3000)
+{
+	error = {"type":"form_error","text":"MAXIMUM CHARACTER LIMIT REACHED","inputs":{"textarea":"Your text has exceeded the 3000-character limit"}};
+	return error;
+}
+reference = form.get("values").get("reference");
+r = reference.toList(",");
+id = r.get(0);
+orgid = r.get(1);
+encodedid = zoho.encryption.urlEncode(id);
+update = invokeurl
+[
+	url :"https://api.linkedin.com/rest/posts/" + encodedid
+	type :POST
+	parameters:{"patch":{"$set":{"commentary":text,"contentCallToActionLabel":"LEARN_MORE"}}} + ""
+	headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202401"}
+	connection:"linkedin"
+];
+sections = list();
+elements = list();
+getcompany = invokeurl
+[
+	url :"https://api.linkedin.com/rest/organizations/" + orgid.toList(":").get(3)
+	type :GET
+	headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+	connection:"linkedin"
+];
+info getcompany;
+pagename = getcompany.get("vanityName");
+encodedorgid = zoho.encryption.urlEncode(orgid);
+allpost = invokeurl
+[
+	url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=0&count=100"
+	type :GET
+	headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+	connection:"linkedin"
+];
+info allpost;
+page = 1;
+buttons = List();
+buttons.add({"label":"Create Post","type":"invoke.function","name":"changePage","id":orgid});
+buttons.add({"label":"Change Page","type":"invoke.function","name":"changePage","id":"changepage"});
+header = {"title":pagename,"buttons":buttons,"navigation":"new"};
+total = allpost.get("paging").get("total");
+share = allpost.get("elements");
+info share.size();
+total = 0;
+available = 0;
+i = 0;
+start = 0;
+for each  post in share
+{
+	lifecyclestate = post.getJSON("lifecycleState");
+	if(lifecyclestate == "PROCESSING_FAILED" || lifecyclestate == "PROCESSING" || lifecyclestate == "PENDING" || lifecyclestate == "FAILED")
+	{
+		start = start + 1;
+		continue;
+	}
+	category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+	m = "";
+	if(category == "URN_REFERENCE")
+	{
+		m = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+		if(m == "multiPhoto")
+		{
+			commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+			total = total + 1;
+			postid = post.getJSON("id");
+			t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+			t = t.get(0);
+			if(t.containsKey("title"))
+			{
+				title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+			}
+			else
+			{
+				title = "Multi Image Post";
+			}
+			if(title.length() > 1000 || commentary.length() > 500)
+			{
+				if(commentary.length() > 500)
+				{
+					ss = commentary.subString(0,495);
+					ss = ss + "...";
+					commentary = ss;
+				}
+				if(title.length() > 1000)
+				{
+					ss = title.subString(0,995);
+					ss = ss + "...";
+					title = ss;
+				}
+			}
+			ref = postid + "," + orgid;
+			elements.add({"type":"title","text":title});
+			elements.add({"type":"text","text":commentary});
+			elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"},{"label":"View Media Files","type":"invoke.function","id":postid,"name":"viewMediaFiles","emotion":"positive"}}});
+			elements.add({"type":"divider"});
+			start = start + 1;
+			available = available + 1;
+		}
+		else if(m == "poll" || m == "event")
+		{
+			start = start + 1;
+			continue;
+		}
+	}
+	if(category == "IMAGE")
+	{
+		commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+		imgurl = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("originalUrl");
+		postid = post.getJSON("id");
+		t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+		t = t.get(0);
+		if(t.containsKey("title"))
+		{
+			title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+		}
+		else
+		{
+			title = "Post";
+		}
+		if(title.length() > 1000 || commentary.length() > 500)
+		{
+			if(commentary.length() > 500)
+			{
+				ss = commentary.subString(0,495);
+				ss = ss + "...";
+				commentary = ss;
+			}
+			if(title.length() > 1000)
+			{
+				ss = title.subString(0,995);
+				ss = ss + "...";
+				title = ss;
+			}
+		}
+		ref = postid + "," + orgid;
+		data = list();
+		data.add({"url":imgurl,"description":"Sample widget image"});
+		elements.add({"type":"title","text":title});
+		elements.add({"type":"text","text":commentary});
+		elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+		elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+		elements.add({"type":"divider"});
+		available = available + 1;
+		start = start + 1;
+	}
+	else if(category == "VIDEO")
+	{
+		commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+		media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(3);
+		postid = post.getJSON("id");
+		t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+		t = t.get(0);
+		if(t.containsKey("title"))
+		{
+			title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+		}
+		else
+		{
+			title = "Post";
+		}
+		if(title.length() > 1000 || commentary.length() > 500)
+		{
+			if(commentary.length() > 500)
+			{
+				ss = commentary.subString(0,495);
+				ss = ss + "...";
+				commentary = ss;
+			}
+			if(title.length() > 1000)
+			{
+				ss = title.subString(0,995);
+				ss = ss + "...";
+				title = ss;
+			}
+		}
+		getimage = invokeurl
+		[
+			url :"https://api.linkedin.com/rest/videos/urn:li:video:" + media
+			type :GET
+			headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			connection:"linkedin"
+		];
+		imgurl = getimage.get("thumbnail");
+		ref = postid + "," + orgid;
+		data = list();
+		data.add({"url":imgurl,"description":"Sample widget image"});
+		elements.add({"type":"title","text":title});
+		elements.add({"type":"text","text":commentary});
+		elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+		elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+		elements.add({"type":"divider"});
+		start = start + 1;
+		available = available + 1;
+	}
+	if(category == "ARTICLE")
+	{
+		commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+		articleurl = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("originalUrl");
+		postid = post.getJSON("id");
+		t = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media");
+		t = t.get(0);
+		if(t.containsKey("title"))
+		{
+			title = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("title").get("text");
+		}
+		else
+		{
+			title = "Title";
+		}
+		if(commentary.length() > 500 || title.length() > 100)
+		{
+			if(commentary.length() > 500)
+			{
+				ss = commentary.subString(0,495);
+				ss = ss + "...";
+				commentary = ss;
+			}
+			if(title.length() > 100)
+			{
+				ss = title.subString(0,95);
+				ss = ss + "...";
+				title = ss;
+			}
+		}
+		ref = postid + "," + orgid;
+		elements.add({"type":"title","text":title});
+		elements.add({"type":"text","text":commentary});
+		elements.add({"type":"text","text":articleurl});
+		elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+		elements.add({"type":"divider"});
+		start = start + 1;
+		available = available + 1;
+	}
+	else if(category == "NONE")
+	{
+		commentary = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+		postid = post.getJSON("id");
+		if(commentary.length() > 500)
+		{
+			ss = commentary.subString(0,494);
+			ss = ss + "...";
+			commentary = ss;
+		}
+		ref = postid + "," + orgid;
+		// 					elements.add({"type":"text","text":"title"});
+		elements.add({"type":"text","text":commentary});
+		elements.add({"type":"buttons","buttons":{{"label":"Comments","type":"invoke.function","id":ref,"name":"comments","emotion":"positive"},{"label":"Edit","type":"invoke.function","id":ref,"name":"update","emotion":"neutral"}}});
+		elements.add({"type":"divider"});
+		start = start + 1;
+		available = available + 1;
+	}
+	if(elements.size() >= 16)
+	{
+		sections.add({"id":i,"elements":elements});
+		i = i + 1;
+		elements = list();
+	}
+	if(sections.size() == 25)
+	{
+		if(start == total)
+		{
+			return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header};
+		}
+		l = list();
+		l.add(page);
+		l.add(start);
+		l.add(orgid);
+		buttons = List();
+		buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+		footer = {"text":"","buttons":buttons};
+		return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer};
+	}
+}
+if(available == 0)
+{
+	return {"type":"applet","data_type":"info","tabs":{{"label":"Posts","id":"post"}},"info":{"title":"Don't keep your audience waiting!","description":"Click here to create your first media post.","image_url":"https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/LinkedIn_logo_initials.png/480px-LinkedIn_logo_initials.png","button":{"label":"Create Post","type":"invoke.function","name":"createFirstMediaPost","id":orgid,"emotion":"positive"}},"active_tab":"post"};
+}
+if(elements.size() != 0)
+{
+	sections.add({"id":i,"elements":elements});
+	if(sections.size() == 25 || start == 100)
+	{
+		if(start == total)
+		{
+			return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header};
+		}
+		l = list();
+		l.add(page);
+		l.add(start);
+		l.add(orgid);
+		buttons = List();
+		buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+		footer = {"text":"","buttons":buttons};
+		return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer};
+	}
+}
+else if(elements.size() == 0)
+{
+	if(sections.size() == 25 || start == 100)
+	{
+		info "available = " + available;
+		info "start = " + start;
+		info "elements size = " + elements.size();
+		info "sections  size = " + sections.size();
+		if(start == total)
+		{
+			return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header};
+		}
+		l = list();
+		l.add(page);
+		l.add(start);
+		l.add(orgid);
+		buttons = List();
+		buttons.add({"label":"Next","type":"invoke.function","name":"nextPost","id":l});
+		footer = {"text":"","buttons":buttons};
+		return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer};
+	}
+}
+info i;
+return {"type":"applet","tabs":{{"label":"Posts","id":"post"}},"active_tab":"post","sections":sections,"header":header};

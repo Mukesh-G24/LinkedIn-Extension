@@ -1,0 +1,56 @@
+account_type = selections.getJSON("title");
+if(account_type.equalsIgnoreCase("Select any one type of account"))
+{
+	return {"type":"banner","text":"Select any one account","status":"failure"};
+}
+if(account_type.equalsIgnoreCase("Personal Account"))
+{
+	user_details = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/me"
+		type :GET
+		connection:"linkedin"
+	];
+	person_id = user_details.get("id");
+	response = {"type":"form","title":"POST DETAILS","name":"details","button_label":"Post","inputs":{{"label":"Title","name":"title","placeholder":"Give title for your post","min_length":"0","max_length":"100","mandatory":true,"type":"text"},{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"},{"label":"Who can see your posts?","name":"visibility","mandatory":true,"type":"radio","options":{{"value":"PUBLIC","label":"Anyone"},{"value":"CONNECTIONS","label":"Connections only"}}},{"label":"Would you like to attach a file or share a URL?","name":"radio","type":"radio","trigger_on_change":true,"options":{{"value":"image","label":"Image"},{"value":"video","label":"Video"},{"value":"article","label":"Article or URL"}}},{"name":"hidden","value":"urn:li:person:" + person_id,"type":"hidden"}},"action":{"type":"invoke.function","name":"createPost"}};
+	return response;
+}
+else if(account_type.equalsIgnoreCase("Organization Account"))
+{
+	orgdetails = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/organizationAcls?q=roleAssignee"
+		type :GET
+		headers:{"X-Restli-Protocol-Version":"2.0.0"}
+		connection:"linkedin"
+	];
+	org = orgdetails.get("elements");
+	orglist = list();
+	for each  e in org
+	{
+		orglist.add(e.getJSON("organization"));
+	}
+	info orglist;
+	if(orglist.size() == 0)
+	{
+		return {"text":"You don't have any pages. Create a page","type":"banner","status":"failure"};
+	}
+	idlist = list();
+	for each  id in orglist
+	{
+		o = id.toList(":").get(3);
+		getinfo = invokeurl
+		[
+			url :"https://api.linkedin.com/rest/organizations/" + o
+			type :GET
+			headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			connection:"linkedin"
+		];
+		name = getinfo.get("vanityName");
+		idlist.add({"label":name,"value":o});
+	}
+	info idlist;
+	res = {"type":"form","title":"PAGE DETAILS","name":"pagedetail","button_label":"Submit","inputs":{{"label":"Select the organization page","name":"select","placeholder":"select the page on which you would like to create a post","multiple":false,"mandatory":true,"type":"select","options":idlist},{"name":"for","value":"create","type":"hidden"}},"action":{"type":"invoke.function","name":"OrgIdForLinkedin"}};
+	return res;
+}
+return Map();

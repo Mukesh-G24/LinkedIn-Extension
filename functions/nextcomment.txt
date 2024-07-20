@@ -1,0 +1,68 @@
+info target;
+id = target.get("id");
+id = id.tolist();
+page = id.toList(",").get(0);
+start = id.toList(",").get(1);
+postid = id.toList(",").get(2);
+page = page.toNumber();
+start = start.toNumber();
+page = page + 1;
+sections = list();
+elements = list();
+header = {"title":"Comments Page " + page,"navigation":"continue"};
+l = list();
+l.add(page);
+getcomments = invokeurl
+[
+	url :"https://api.linkedin.com/v2/socialActions/" + postid + "/comments?start=" + start + "&count=1000"
+	type :GET
+	headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+	connection:"linkedin"
+];
+info getcomments;
+comments = getcomments.get("elements");
+total = getcomments.get("paging").get("total");
+i = 1;
+for each  c in comments
+{
+	comment = c.getJSON("message").get("text");
+	info comment;
+	if(comment.length() > 500)
+	{
+		ss = comment.subString(0,495);
+		ss = ss + "...";
+		comment = ss;
+	}
+	else if(comment.length() == 0)
+	{
+		start = start + 1;
+		continue;
+	}
+	elements.add({"type":"text","text":comment});
+	elements.add({"type":"divider"});
+	start = start + 1;
+	if(elements.size() == 20)
+	{
+		sections.add({"id":i,"elements":elements});
+		i = i + 1;
+		elements = list();
+	}
+	if(sections.size() == 25)
+	{
+		if(start == total)
+		{
+			return {"type":"applet","tabs":{{"label":"Posts","id":"post"}},"active_tab":"post","sections":sections,"header":header};
+		}
+		l.add(start);
+		l.add(postid);
+		buttons = List();
+		buttons.add({"label":"Next","type":"invoke.function","name":"samplewidgetnextcomments","id":l});
+		footer = {"text":"","buttons":buttons};
+		return {"type":"applet","tabs":{{"label":"Posts","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer};
+	}
+}
+if(elements.size() != 0)
+{
+	sections.add({"id":i,"elements":elements});
+}
+return {"type":"applet","tabs":{{"label":"Posts","id":"post"}},"active_tab":"post","sections":sections,"header":header};

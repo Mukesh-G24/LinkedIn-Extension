@@ -1,0 +1,48 @@
+actions = list();
+val = form.get("values");
+targetName = target.get("name");
+if(targetName.equalsIgnoreCase("radio"))
+{
+	fieldvalue = val.get("radio").get("value");
+	if(fieldvalue.equalsIgnoreCase("image"))
+	{
+		actions.add({"type":"remove","name":"url"});
+		// 		actions.add({"type":"remove","name":"question"});
+		// 		actions.add({"type":"remove","name":"number"});
+		// 		actions.add({"type":"add_after","name":"radio","input":{"label":"Title","name":"text","placeholder":"Give title to your post....","min_length":"0","max_length":"100","mandatory":false,"type":"text"}});
+		// 		actions.add({"type":"add_after","name":"text","input":{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"}});
+		actions.add({"type":"remove","name":"file"});
+		actions.add({"type":"remove","name":"url"});
+		actions.add({"type":"add_after","name":"radio","input":{"name":"file","label":"upload your file","placeholder":"Upload image","mandatory":true,"type":"file","multiple":true,"max_selections":9}});
+	}
+	else if(fieldvalue.equalsIgnoreCase("video"))
+	{
+		actions.add({"type":"remove","name":"url"});
+		actions.add({"type":"remove","name":"file"});
+		// 		actions.add({"type":"remove","name":"question"});
+		// 		actions.add({"type":"remove","name":"number"});
+		// 		actions.add({"type":"add_after","name":"radio","input":{"label":"Title","name":"text","placeholder":"Give title to your post....","min_length":"0","max_length":"100","mandatory":false,"type":"text"}});
+		// 		actions.add({"type":"add_after","name":"text","input":{"label":"About","name":"textarea","placeholder":"What do you want to talk about? ","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"}});
+		actions.add({"type":"add_after","name":"radio","input":{"label":"Upload Files","name":"file","placeholder":"Upload video \n (maximum file size 4MB)","mandatory":true,"type":"file"}});
+	}
+	else if(fieldvalue.equalsIgnoreCase("article"))
+	{
+		// 		actions.add({"type":"remove","name":"file"});
+		// 		actions.add({"type":"remove","name":"question"});
+		// 		actions.add({"type":"remove","name":"number"});
+		actions.add({"type":"remove","name":"file"});
+		// 		actions.add({"type":"add_after","name":"radio","input":{"label":"Title","name":"text","placeholder":"Give title to your post....","min_length":"0","max_length":"100","mandatory":false,"type":"text"}});
+		// 		actions.add({"type":"add_after","name":"text","input":{"label":"About","name":"textarea","placeholder":"What do you want to talk about? ","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"}});
+		actions.add({"type":"add_after","name":"radio","input":{"label":"Article url","name":"url","placeholder":"Add the URL here","min_length":"0","max_length":"100","mandatory":true,"type":"text","format":"url"}});
+	}
+	// 	else if(fieldvalue.equalsIgnoreCase("onlytext"))
+	// 	{
+	// 		actions.add({"type":"remove","name":"file"});
+	// 		actions.add({"type":"remove","name":"url"});
+	// 		actions.add({"type":"remove","name":"question"});
+	// 		actions.add({"type":"remove","name":"number"});
+	// 		actions.add({"type":"remove","name":"text"});
+	// 		actions.add({"type":"add_after","name":"radio","input":{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":true,"type":"textarea"}});
+	// 	}
+}
+return {"type":"form_modification","actions":actions};

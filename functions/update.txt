@@ -1,0 +1,15 @@
+reference = target.get("id");
+r = reference.toList(",");
+id = r.get(0);
+orgid = r.get(1);
+id = zoho.encryption.urlEncode(id);
+getpost = invokeurl
+[
+	url :"https://api.linkedin.com/v2/ugcPosts/" + id + "?viewContext=AUTHOR"
+	type :GET
+	headers:{"X-Restli-Protocol-Version":"2.0.0"}
+	connection:"linkedin"
+];
+text = getpost.get("specificContent").get("com.linkedin.ugc.ShareContent").get("shareCommentary").get("text");
+response = {"type":"form","title":"Updating post","name":"post","button_label":"Submit","inputs":{{"label":"Share your thoughts","name":"textarea","placeholder":"","value":text,"min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"},{"name":"reference","value":reference,"type":"hidden"}},"action":{"type":"invoke.function","name":"updatePost"}};
+return response;

@@ -1,0 +1,160 @@
+info target;
+reference = target.get("id").toString();
+postid = reference.toList('"').get(1);
+orgid = reference.toList('"').get(3);
+replies = reference.toList('"').get(5);
+info reference;
+postid = postid.toString();
+info postid;
+orgid = orgid.toString();
+info orgid;
+replies = replies.toString();
+info replies;
+sections = list();
+elements = list();
+page = 1;
+header = {"title":"Replies Page " + page,"navigation":"continue"};
+// if ( replies == "no" ) 
+// {
+// 	return {"type":"banner","text":"No replies available for this comment","status":"failure"};
+// }
+id = zoho.encryption.urlEncode(postid);
+getcomment = invokeurl
+[
+	url :"https://api.linkedin.com/v2/socialActions/" + id + "/comments?start=0&count=1000"
+	type :GET
+	headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+	connection:"linkedin"
+];
+info getcomment;
+comments = getcomment.get("elements");
+total = getcomment.get("paging").get("total");
+start = 0;
+available = 0;
+i = 1;
+l = list();
+l.add(page);
+for each  c in comments
+{
+	comment = c.getJSON("message").get("text");
+	urn = c.getJSON("$URN");
+	info urn;
+	if(c.containKey("content"))
+	{
+		contenturl = c.get("content").getJSON("url");
+	}
+	if(comment.length() > 500)
+	{
+		ss = comment.subString(0,495);
+		ss = ss + "...";
+		comment = ss;
+	}
+	else if(comment.length() == 0)
+	{
+		start = start + 1;
+		continue;
+	}
+	actor = c.getJSON("actor");
+	type = actor.toList(":").get(2);
+	actorid = actor.toList(":").get(3);
+	if(type == "person")
+	{
+		getpersondetails = invokeurl
+		[
+			url :"https://api.linkedin.com/v2/people/(id:" + actorid + ")"
+			type :GET
+			headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			connection:"linkedin"
+		];
+		info getpersondetails;
+		lastname = getpersondetails.get("localizedLastName");
+		firstname = getpersondetails.get("localizedFirstName");
+		name = firstname + " " + lastname;
+		if(getpersondetails.containKey("profilePicture"))
+		{
+			picid = getpersondetails.get("profilePicture").get("displayImage").toList(":").get(3);
+			id = zoho.encryption.urlEncode("urn:li:image:" + picid);
+			getimage = invokeurl
+			[
+				url :"https://api.linkedin.com/rest/images/" + id
+				type :GET
+				headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+				connection:"linkedin"
+			];
+			info getimage;
+			imgurl = getimage.get("downloadUrl");
+		}
+		else
+		{
+			imgurl = "https://t3.ftcdn.net/jpg/03/46/83/96/240_F_346839683_6nAPzbhpSkIpb8pmAwufkC7c5eD7wYws.jpg";
+		}
+	}
+	else if(type == "organization")
+	{
+		getorgdetails = invokeurl
+		[
+			url :"https://api.linkedin.com/rest/organizations/" + actorid
+			type :GET
+			headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			connection:"linkedin"
+		];
+		info getorgdetails;
+		name = getorgdetails.get("localizedName");
+		if(getorgdetails.containKey("logoV2"))
+		{
+			picid = getorgdetails.get("logoV2").get("original").toList(":").get(3);
+			id = zoho.encryption.urlEncode("urn:li:image:" + picid);
+			getimage = invokeurl
+			[
+				url :"https://api.linkedin.com/rest/images/" + id
+				type :GET
+				headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+				connection:"linkedin"
+			];
+			info getimage;
+			imgurl = getimage.get("downloadUrl");
+		}
+		else
+		{
+			imgurl = "https://t3.ftcdn.net/jpg/03/46/83/96/240_F_346839683_6nAPzbhpSkIpb8pmAwufkC7c5eD7wYws.jpg";
+		}
+	}
+	elements.add({"type":"activity","title":name,"description":comment,"image_url":imgurl});
+	if(c.containKey("content"))
+	{
+		data = list();
+		data.add({"url":contenturl,"description":"Sample widget image"});
+		elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+	}
+	elements.add({"type":"divider"});
+	start = start + 1;
+	available = available + 1;
+	if(elements.size() >= 18)
+	{
+		sections.add({"id":i,"elements":elements});
+		i = i + 1;
+		elements = list();
+	}
+	if(sections.size() == 25)
+	{
+		if(start == total)
+		{
+			return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header};
+		}
+		l.add(start);
+		l.add(postid);
+		buttons = List();
+		buttons.add({"label":"Next","type":"invoke.function","name":"nextReplies","id":l});
+		footer = {"text":"","buttons":buttons};
+		return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header,"footer":footer};
+	}
+}
+if(available == 0)
+{
+	return {"type":"banner","text":"No reply comments available for this comment.","status":"failure"};
+}
+if(elements.size() != 0)
+{
+	sections.add({"id":i,"elements":elements});
+}
+return {"type":"applet","tabs":{{"label":"Post","id":"post"}},"active_tab":"post","sections":sections,"header":header};

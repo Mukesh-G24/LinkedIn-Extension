@@ -1,0 +1,32 @@
+info target;
+header = {"title":"Media Files","navigation":"continue"};
+id = target.get("id");
+id = zoho.encryption.urlEncode(id);
+sections = list();
+elements = list();
+getmultiImagepost = invokeurl
+[
+	url :"https://api.linkedin.com/rest/posts/" + id
+	type :GET
+	headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304","Content-Type":"application/json"}
+	connection:"linkedin"
+];
+images = getmultiImagepost.get("content").get("multiImage").get("images");
+data = list();
+for each  image in images
+{
+	id = image.getJSON("id");
+	id = zoho.encryption.urlEncode(id);
+	getimage = invokeurl
+	[
+		url :"https://api.linkedin.com/rest/images/" + id
+		type :GET
+		headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+		connection:"linkedin"
+	];
+	imgurl = getimage.get("downloadUrl");
+	data.add({"url":imgurl,"description":"sample image"});
+}
+elements.add({"type":"images","style":{"view":"gallery","size":"small"},"data":data});
+sections.add({"id":1,"elements":elements});
+return {"type":"applet","tabs":{{"label":"Posts","id":"post"}},"active_tab":"post","sections":sections,"header":header};

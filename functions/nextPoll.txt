@@ -1,0 +1,419 @@
+response = Map();
+info target;
+info arguments;
+reference = arguments.get("key");
+reference = reference.toList(",");
+orgid = reference.get(0);
+getcompany = invokeurl
+[
+	url :"https://api.linkedin.com/rest/organizations/" + orgid.toList(":").get(3)
+	type :GET
+	headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+	connection:"linkedin"
+];
+info getcompany;
+pagename = getcompany.get("vanityName");
+start = reference.get(1);
+purpose = reference.get(2);
+start = toNumber(start);
+info orgid;
+info start;
+info purpose;
+if(purpose == "completed")
+{
+	key = orgid + ",";
+	encodedorgid = zoho.encryption.urlEncode(orgid);
+	allpost = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=" + start + "&count=100"
+		type :GET
+		headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+		connection:"linkedin"
+	];
+	info allpost;
+	share = allpost.get("elements");
+	total = allpost.get("paging").get("total");
+	response = Map();
+	response.put("text","*Page : *" + pagename);
+	bot = Map();
+	bot.put("name","Linkedin");
+	response.put("bot",bot);
+	buttonsList = list();
+	card = Map();
+	card.put("title","COMPLETED POLL DETAILS");
+	response.put("card",card);
+	slidesList = list();
+	slidesList0 = Map();
+	slidesList0.put("type","table");
+	data = Map();
+	headersList = list();
+	headersList.add("Description");
+	headersList.add("Question");
+	headersList.add("View");
+	data.put("headers",headersList);
+	rows = list();
+	count = 0;
+	available = 0;
+	for each  post in share
+	{
+		category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+		if(category == "URN_REFERENCE")
+		{
+			media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+			if(media == "poll")
+			{
+				postid = post.getJSON("id");
+				id = zoho.encryption.urlEncode(postid);
+				getpoll = invokeurl
+				[
+					url :"https://api.linkedin.com/rest/posts/" + id
+					type :GET
+					headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+					detailed:true
+					connection:"linkedin"
+				];
+				published = getpoll.get("responseText").get("publishedAt");
+				publishedDate = toDateTimeString(published,"dd-MMM-y  hh:mm:ss","IST");
+				closingDate = "";
+				duration = getpoll.get("responseText").get("content").get("poll").get("settings").get("duration");
+				if(duration.contains("ONE"))
+				{
+					closingDate = publishedDate.addDay(1);
+				}
+				else if(duration.contains("THREE"))
+				{
+					closingDate = publishedDate.addDay(3);
+				}
+				else if(duration.contains("SEVEN"))
+				{
+					closingDate = publishedDate.addDay(7);
+				}
+				else if(duration.contains("FOURTEEN"))
+				{
+					closingDate = publishedDate.addDay(14);
+				}
+				closingDate = toString(closingDate);
+				unixClosingDate = closingDate.unixEpoch("Asia/Calcutta");
+				n = toString(now);
+				unixNowDate = n.unixEpoch("Asia/Calcutta");
+				if(unixNowDate > unixClosingDate)
+				{
+					count = count + 1;
+					question = getpoll.get("responseText").get("content").get("poll").get("question");
+					commentary = getpoll.get("responseText").get("commentary");
+					optionslist = getpoll.get("responseText").get("content").get("poll").get("options");
+					r = Map();
+					r.put("Description",commentary);
+					r.put("Question",question);
+					r.put("View","[View Poll](invoke.function|viewPoll|scott.fisher@zylker.com|" + postid + ")");
+					rows.add(r);
+					start = start + 1;
+					available = available + 1;
+				}
+			}
+			else
+			{
+				start = start + 1;
+			}
+		}
+		else
+		{
+			start = start + 1;
+		}
+	}
+	if(available == 0)
+	{
+		return {"type":"banner","text":"No polls available in your page.","status":"failure"};
+	}
+	info start;
+	s = toString(start);
+	key = key + s;
+	info count;
+	data.put("rows",rows);
+	slidesList0.put("data",data);
+	slidesList.add(slidesList0);
+	if(start != total)
+	{
+		encodedorgid = zoho.encryption.urlEncode(orgid);
+		allpost = invokeurl
+		[
+			url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=" + start + "&count=100"
+			type :GET
+			headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+			connection:"linkedin"
+		];
+		info allpost;
+		share = allpost.get("elements");
+		total = allpost.get("paging").get("total");
+		count = 0;
+		available = 0;
+		for each  post in share
+		{
+			category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+			if(category == "URN_REFERENCE")
+			{
+				media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+				if(media == "poll")
+				{
+					postid = post.getJSON("id");
+					id = zoho.encryption.urlEncode(postid);
+					getpoll = invokeurl
+					[
+						url :"https://api.linkedin.com/rest/posts/" + id
+						type :GET
+						headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+						detailed:true
+						connection:"linkedin"
+					];
+					published = getpoll.get("responseText").get("publishedAt");
+					publishedDate = toDateTimeString(published,"dd-MMM-y  hh:mm:ss","IST");
+					closingDate = "";
+					duration = getpoll.get("responseText").get("content").get("poll").get("settings").get("duration");
+					if(duration.contains("ONE"))
+					{
+						closingDate = publishedDate.addDay(1);
+					}
+					else if(duration.contains("THREE"))
+					{
+						closingDate = publishedDate.addDay(3);
+					}
+					else if(duration.contains("SEVEN"))
+					{
+						closingDate = publishedDate.addDay(7);
+					}
+					else if(duration.contains("FOURTEEN"))
+					{
+						closingDate = publishedDate.addDay(14);
+					}
+					closingDate = toString(closingDate);
+					unixClosingDate = closingDate.unixEpoch("Asia/Calcutta");
+					n = toString(now);
+					unixNowDate = n.unixEpoch("Asia/Calcutta");
+					if(unixNowDate > unixClosingDate)
+					{
+						count = count + 1;
+						start = start + 1;
+						available = available + 1;
+					}
+				}
+			}
+		}
+		if(available != 0)
+		{
+			buttonsList0 = Map();
+			buttonsList0.put("label","Next");
+			action = Map();
+			action.put("type","invoke.function");
+			data = Map();
+			data.put("name","nextPoll");
+			action.put("data",data);
+			buttonsList0.put("action",action);
+			buttonsList0.put("key",key);
+			buttonsList.add(buttonsList0);
+			slidesList0.put("buttons",buttonsList);
+		}
+	}
+	response.put("slides",slidesList);
+	response.put("navigation",true);
+	return response;
+}
+else if(purpose == "pending")
+{
+	key = orgid + ",";
+	encodedorgid = zoho.encryption.urlEncode(orgid);
+	allpost = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=" + start + "&count=100"
+		type :GET
+		headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+		connection:"linkedin"
+	];
+	info allpost;
+	share = allpost.get("elements");
+	total = allpost.get("paging").get("total");
+	response = Map();
+	response.put("text","*Page : *" + pagename);
+	bot = Map();
+	bot.put("name","Linkedin");
+	response.put("bot",bot);
+	buttonsList = list();
+	card = Map();
+	card.put("title","PENDING POLL DETAILS");
+	response.put("card",card);
+	slidesList = list();
+	slidesList0 = Map();
+	slidesList0.put("type","table");
+	data = Map();
+	headersList = list();
+	headersList.add("Description");
+	headersList.add("Question");
+	headersList.add("View");
+	data.put("headers",headersList);
+	rows = list();
+	count = 0;
+	available = 0;
+	for each  post in share
+	{
+		category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+		if(category == "URN_REFERENCE")
+		{
+			media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+			if(media == "poll")
+			{
+				postid = post.getJSON("id");
+				id = zoho.encryption.urlEncode(postid);
+				getpoll = invokeurl
+				[
+					url :"https://api.linkedin.com/rest/posts/" + id
+					type :GET
+					headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+					detailed:true
+					connection:"linkedin"
+				];
+				published = getpoll.get("responseText").get("publishedAt");
+				publishedDate = toDateTimeString(published,"dd-MMM-y  hh:mm:ss","IST");
+				closingDate = "";
+				duration = getpoll.get("responseText").get("content").get("poll").get("settings").get("duration");
+				if(duration.contains("ONE"))
+				{
+					closingDate = publishedDate.addDay(1);
+				}
+				else if(duration.contains("THREE"))
+				{
+					closingDate = publishedDate.addDay(3);
+				}
+				else if(duration.contains("SEVEN"))
+				{
+					closingDate = publishedDate.addDay(7);
+				}
+				else if(duration.contains("FOURTEEN"))
+				{
+					closingDate = publishedDate.addDay(14);
+				}
+				closingDate = toString(closingDate);
+				unixClosingDate = closingDate.unixEpoch("Asia/Calcutta");
+				n = toString(now);
+				unixNowDate = n.unixEpoch("Asia/Calcutta");
+				if(unixNowDate < unixClosingDate)
+				{
+					count = count + 1;
+					question = getpoll.get("responseText").get("content").get("poll").get("question");
+					commentary = getpoll.get("responseText").get("commentary");
+					optionslist = getpoll.get("responseText").get("content").get("poll").get("options");
+					r = Map();
+					r.put("Description",commentary);
+					r.put("Question",question);
+					r.put("View","[View Poll](invoke.function|viewPoll|scott.fisher@zylker.com|" + postid + ")");
+					rows.add(r);
+					start = start + 1;
+					available = available + 1;
+				}
+			}
+			else
+			{
+				start = start + 1;
+			}
+		}
+		else
+		{
+			start = start + 1;
+		}
+	}
+	if(available == 0)
+	{
+		return {"type":"banner","text":"No polls available in your page.","status":"failure"};
+	}
+	info start;
+	s = toString(start);
+	key = key + s + ",";
+	key = key + "pending";
+	info count;
+	data.put("rows",rows);
+	slidesList0.put("data",data);
+	slidesList.add(slidesList0);
+	if(start != total)
+	{
+		encodedorgid = zoho.encryption.urlEncode(orgid);
+		allpost = invokeurl
+		[
+			url :"https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(" + encodedorgid + ")&sortBy=CREATED&start=" + start + "&count=100"
+			type :GET
+			headers:{"Content-Type":"application/x-www-form-urlencoded","X-Restli-Protocol-Version":"2.0.0"}
+			connection:"linkedin"
+		];
+		info allpost;
+		share = allpost.get("elements");
+		total = allpost.get("paging").get("total");
+		count = 0;
+		available = 0;
+		for each  post in share
+		{
+			category = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("shareMediaCategory");
+			if(category == "URN_REFERENCE")
+			{
+				media = post.getJSON("specificContent").get("com.linkedin.ugc.ShareContent").get("media").getJSON("media").toList(":").get(2);
+				if(media == "poll")
+				{
+					postid = post.getJSON("id");
+					id = zoho.encryption.urlEncode(postid);
+					getpoll = invokeurl
+					[
+						url :"https://api.linkedin.com/rest/posts/" + id
+						type :GET
+						headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+						detailed:true
+						connection:"linkedin"
+					];
+					published = getpoll.get("responseText").get("publishedAt");
+					publishedDate = toDateTimeString(published,"dd-MMM-y  hh:mm:ss","IST");
+					closingDate = "";
+					duration = getpoll.get("responseText").get("content").get("poll").get("settings").get("duration");
+					if(duration.contains("ONE"))
+					{
+						closingDate = publishedDate.addDay(1);
+					}
+					else if(duration.contains("THREE"))
+					{
+						closingDate = publishedDate.addDay(3);
+					}
+					else if(duration.contains("SEVEN"))
+					{
+						closingDate = publishedDate.addDay(7);
+					}
+					else if(duration.contains("FOURTEEN"))
+					{
+						closingDate = publishedDate.addDay(14);
+					}
+					closingDate = toString(closingDate);
+					unixClosingDate = closingDate.unixEpoch("Asia/Calcutta");
+					n = toString(now);
+					unixNowDate = n.unixEpoch("Asia/Calcutta");
+					if(unixNowDate < unixClosingDate)
+					{
+						count = count + 1;
+						start = start + 1;
+						available = available + 1;
+					}
+				}
+			}
+		}
+		if(available != 0)
+		{
+			buttonsList0 = Map();
+			buttonsList0.put("label","Next");
+			action = Map();
+			action.put("type","invoke.function");
+			data = Map();
+			data.put("name","nextPoll");
+			action.put("data",data);
+			buttonsList0.put("action",action);
+			buttonsList0.put("key",key);
+			buttonsList.add(buttonsList0);
+			slidesList0.put("buttons",buttonsList);
+		}
+	}
+	response.put("slides",slidesList);
+	response.put("navigation",true);
+	return response;
+}
+return Map();

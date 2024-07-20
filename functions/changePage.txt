@@ -1,0 +1,50 @@
+info target;
+purpose = target.get("id");
+if(purpose.contains("changepage"))
+{
+	orgdetails = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/organizationAcls?q=roleAssignee"
+		type :GET
+		headers:{"X-Restli-Protocol-Version":"2.0.0"}
+		connection:"linkedin"
+	];
+	org = orgdetails.get("elements");
+	orglist = list();
+	for each  e in org
+	{
+		orglist.add(e.getJSON("organization"));
+	}
+	if(orglist.size() == 0)
+	{
+		return {"type":"applet","data_type":"info","tabs":{{"label":"Media Posts","id":"mediapost"}},"info":{"title":"You don't have any company pages.","description":"Create a company page to manage your posts.","image_url":"https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/LinkedIn_logo_initials.png/480px-LinkedIn_logo_initials.png"},"active_tab":"mediapost"};
+	}
+	info orglist;
+	idlist = list();
+	for each  id in orglist
+	{
+		o = id.toList(":").get(3);
+		getinfo = invokeurl
+		[
+			url :"https://api.linkedin.com/rest/organizations/" + o
+			type :GET
+			headers:{"X-Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+			connection:"linkedin"
+		];
+		name = getinfo.get("vanityName");
+		idlist.add({"label":name,"value":o});
+	}
+	info idlist;
+	form = {"mode":"kiosk","title":"PAGE DETAILS","name":"pagedetail","button_label":"Submit","inputs":{{"label":"Select the organization page","name":"select","placeholder":"Select the page on which you would like to manage your posts","multiple":false,"mandatory":true,"type":"select","options":idlist}},"action":{"type":"invoke.function","name":"widget"}};
+	return {"type":"applet","data_type":"form","tabs":{{"label":"Form view","id":"form"}},"active_tab":"form","form":form};
+	// res = {"type":"form","title":"PAGE DETAILS","name":"pagedetail","button_label":"Submit","inputs":{{"label":"Select the organization page","name":"select","placeholder":"Select the page on which you would like to manage your posts","multiple":false,"mandatory":true,"type":"select","options":idlist}},"action":{"type":"invoke.function","name":"widget"}};
+	// return res;
+}
+else if(purpose.contains("organization"))
+{
+	info purpose;
+	// 	info orgid;
+	response = {"type":"form","title":"POST DETAILS","name":"details","button_label":"Post","inputs":{{"label":"Title","name":"title","placeholder":"Give title for your post","min_length":"0","max_length":"100","mandatory":true,"type":"text"},{"label":"About","name":"textarea","placeholder":"What do you want to talk about?","min_length":"0","max_length":"3000","mandatory":false,"type":"textarea"},{"label":"Who can see your posts?","name":"visibility","mandatory":true,"type":"radio","options":{{"value":"PUBLIC","label":"Anyone"},{"value":"CONNECTIONS","label":"Connections only"}}},{"label":"Would you like to attach a file or share a URL?","name":"radio","type":"radio","trigger_on_change":true,"options":{{"value":"image","label":"Image"},{"value":"video","label":"Video"},{"value":"article","label":"Article or URL"}}},{"name":"hidden","value":purpose,"type":"hidden"},{"name":"from","value":"widget","type":"hidden"}},"action":{"type":"invoke.function","name":"createPost"}};
+	return response;
+}
+return Map();

@@ -1,0 +1,237 @@
+info messages;
+info message;
+info form;
+values = form.get("values");
+id = values.get("id");
+commentry = form.get("values").get("textarea");
+visibility = values.get("visibility").get("value");
+if(commentry.length() > 3000)
+{
+	error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"textarea":"Your text has exceeded the 3000-character limit"}};
+	return error;
+}
+from = form.get("values").get("from");
+if(from == "image")
+{
+	image = values.get("image");
+	title = values.get("text");
+	if(title.length() > 100)
+	{
+		error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"text":"Your text has exceeded the 100-character limit"}};
+		return error;
+	}
+	createpost = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts"
+		type :POST
+		parameters:{"author":id,"lifecycleState":"PUBLISHED","specificContent":{"com.linkedin.ugc.ShareContent":{"shareCommentary":{"text":commentry},"shareMediaCategory":"IMAGE","media":{{"status":"READY","description":{"text":"Center stage!"},"media":"urn:li:digitalmediaAsset:" + image,"title":{"text":title}}}}},"visibility":{"com.linkedin.ugc.MemberNetworkVisibility":visibility}} + ""
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+		detailed:true
+		connection:"linkedin"
+	];
+	info createpost;
+	postid = createpost.get("responseText").get("id");
+	link = "https://www.linkedin.com/feed/update/" + postid;
+	if(createpost.get("responseCode") == 201)
+	{
+		// 		return {"text":"Post created successfully","type":"banner","status":"success"};
+		response = Map();
+		response.put("text","*TITLE* : " + title + "\n*DESCRIPTION* : " + commentry + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POST CREATED SUCCESSFULLY*\nPOST DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Post");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+else if(from == "multiimage")
+{
+	imageList = values.get("imageList");
+	imageList = imageList.toList();
+	title = values.get("text");
+	createpost = invokeurl
+	[
+		url :"https://api.linkedin.com/rest/posts"
+		type :POST
+		parameters:{"author":id,"commentary":commentry,"visibility":visibility,"distribution":{"feedDistribution":"MAIN_FEED","targetEntities":{},"thirdPartyDistributionChannels":{}},"lifecycleState":"PUBLISHED","isReshareDisabledByAuthor":false,"content":{"multiImage":{"images":imageList}}} + ""
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304","Content-Type":"application/json"}
+		detailed:true
+		connection:"linkedin"
+	];
+	postid = createpost.get("responseHeader").get("x-linkedin-id");
+	link = "https://www.linkedin.com/feed/update/" + postid;
+	if(createpost.get("responseCode") == 201)
+	{
+		response = Map();
+		response.put("text","*TITLE* : " + title + "\n*DESCRIPTION* : " + commentry + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POST CREATED SUCCESSFULLY*\nPOST DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Post");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+else if(from == "video")
+{
+	title = values.get("text");
+	if(title.length() > 100)
+	{
+		error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"text":"Your text has exceeded the 100-character limit"}};
+		return error;
+	}
+	asset = form.get("values").get("asset");
+	videopost = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts"
+		type :POST
+		parameters:{"author":id,"lifecycleState":"PUBLISHED","specificContent":{"com.linkedin.ugc.ShareContent":{"shareCommentary":{"text":commentry},"shareMediaCategory":"VIDEO","media":{{"status":"READY","description":{"text":"Center stage!"},"media":"urn:li:digitalmediaAsset:" + asset,"title":{"text":title}}}}},"visibility":{"com.linkedin.ugc.MemberNetworkVisibility":visibility}} + ""
+		headers:{"Restli-Protocol-Version":"2.0.0","LinkedIn-Version":"202304"}
+		detailed:true
+		connection:"linkedin"
+	];
+	postid = videopost.get("responseText").get("id");
+	link = "https://www.linkedin.com/feed/update/" + postid;
+	if(videopost.get("responseCode") == 201)
+	{
+		// 		return {"text":"Post created successfully","type":"banner","status":"success"};
+		response = Map();
+		response.put("text","*TITLE* : " + title + "\n*DESCRIPTION* : " + commentry + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POST CREATED SUCCESSFULLY*\nPOST DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Post");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+else if(from == "link")
+{
+	url = values.get("url");
+	title = values.get("text");
+	articleshare = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts"
+		type :POST
+		parameters:{"author":id,"lifecycleState":"PUBLISHED","specificContent":{"com.linkedin.ugc.ShareContent":{"shareCommentary":{"text":commentry},"shareMediaCategory":"ARTICLE","media":{{"status":"READY","description":{"text":""},"originalUrl":url,"title":{"text":title}}}}},"visibility":{"com.linkedin.ugc.MemberNetworkVisibility":visibility}} + ""
+		headers:{"X-Restli-Protocol-Version":"2.0.0"}
+		detailed:true
+		connection:"linkedin"
+	];
+	info articleshare;
+	if(articleshare.get("responseCode") == 201 && (url.contains("https://linkedin.com") || url.contains("http://linkedin.com") || url.contains("https://www.linkedin.com") || url.contains("http://www.linkedin.com")))
+	{
+		return {"text":"Post created successfully","type":"banner","status":"success"};
+	}
+	postid = articleshare.get("responseText").get("id");
+	link = "https://www.linkedin.com/feed/update/" + postid;
+	if(articleshare.get("responseCode") == 201)
+	{
+		// 		return {"text":"Post created successfully","type":"banner","status":"success"};
+		response = Map();
+		response.put("text","*TITLE* : " + title + "\n*DESCRIPTION* : " + commentry + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POST CREATED SUCCESSFULLY*\nPOST DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Post");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+else if(from == "text")
+{
+	title = form.get("values").get("title");
+	visibility = form.get("values").get("visibility").get("value");
+	commentry = form.get("values").get("textarea");
+	if(commentry.length() > 3000)
+	{
+		error = {"type":"form_error","text":"MAXIMUM LIMIT REACHED","inputs":{"textarea":"Your text has exceeded the 3000-character limit"}};
+		return error;
+	}
+	textshare = invokeurl
+	[
+		url :"https://api.linkedin.com/v2/ugcPosts"
+		type :POST
+		parameters:{"author":id,"lifecycleState":"PUBLISHED","specificContent":{"com.linkedin.ugc.ShareContent":{"shareCommentary":{"text":commentry},"shareMediaCategory":"NONE"}},"visibility":{"com.linkedin.ugc.MemberNetworkVisibility":visibility}} + ""
+		headers:{"X-Restli-Protocol-Version":"2.0.0"}
+		detailed:true
+		connection:"linkedin"
+	];
+	info textshare;
+	postid = textshare.get("responseText").get("id");
+	link = "https://www.linkedin.com/feed/update/" + postid;
+	if(textshare.get("responseCode") == 201)
+	{
+		// 		return {"text":"Post created successfully","type":"banner","status":"success"};
+		response = Map();
+		response.put("text","*TITLE* : " + title + "\n*DESCRIPTION* : " + commentry + "\n");
+		// 		bot = Map();
+		// 		bot.put("name","Linkedin");
+		// 		response.put("bot",bot);
+		card = Map();
+		card.put("title","*POST CREATED SUCCESSFULLY*\nPOST DETAILS\n");
+		response.put("card",card);
+		buttonsList = list();
+		buttonsList0 = Map();
+		buttonsList0.put("label","View Post");
+		action = Map();
+		action.put("type","open.url");
+		data = Map();
+		data.put("web",link);
+		action.put("data",data);
+		buttonsList0.put("action",action);
+		buttonsList.add(buttonsList0);
+		response.put("buttons",buttonsList);
+		info zoho.cliq.postToBot("linkedinv",response);
+	}
+}
+return Map();

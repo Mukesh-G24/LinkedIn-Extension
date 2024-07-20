@@ -1,0 +1,41 @@
+info form;
+info target;
+actions = list();
+val = form.get("values");
+targetName = target.get("name");
+if(targetName.equalsIgnoreCase("option"))
+{
+	fieldvalue = val.get("option").get("value");
+	info fieldvalue;
+	if(fieldvalue == 2)
+	{
+		actions.add({"type":"remove","name":"option-1"});
+		actions.add({"type":"remove","name":"option-2"});
+		actions.add({"type":"remove","name":"option-3"});
+		actions.add({"type":"remove","name":"option-4"});
+		actions.add({"type":"add_after","name":"option","input":{"label":"Option 1","name":"option-1","placeholder":"Enter the option","min_length":"0","max_length":"30","mandatory":true,"type":"text"}});
+		actions.add({"type":"add_after","name":"option-1","input":{"label":"Option 2","name":"option-2","placeholder":"Enter the option","min_length":"0","max_length":"30","mandatory":true,"type":"text"}});
+	}
+	else if(fieldvalue == 3)
+	{
+		actions.add({"type":"remove","name":"option-1"});
+		actions.add({"type":"remove","name":"option-2"});
+		actions.add({"type":"remove","name":"option-3"});
+		actions.add({"type":"remove","name":"option-4"});
+		actions.add({"type":"add_after","name":"option","input":{"label":"Option 1","name":"option-1","placeholder":"Enter the option","min_length":"0","max_length":"30","mandatory":true,"type":"text"}});
+		actions.add({"type":"add_after","name":"option-1","input":{"label":"Option 2","name":"option-2","placeholder":"Enter the option","min_length":"0","max_length":"30","mandatory":true,"type":"text"}});
+		actions.add({"type":"add_after","name":"option-2","input":{"label":"Option 3","name":"option-3","placeholder":"Enter the option","min_length":"0","max_length":"30","mandatory":true,"type":"text"}});
+	}
+	else if(fieldvalue == 4)
+	{
+		actions.add({"type":"remove","name":"option-1"});
+		actions.add({"type":"remove","name":"option-2"});
+		actions.add({"type":"remove","name":"option-3"});
+		actions.add({"type":"remove","name":"option-4"});
+		actions.add({"type":"add_after","name":"option","input":{"label":"Option 1","name":"option-1","placeholder":"Enter the option","min_length":"0","max_length":"30","mandatory":true,"type":"text"}});
+		actions.add({"type":"add_after","name":"option-1","input":{"label":"Option 2","name":"option-2","placeholder":"Enter the option","min_length":"0","max_length":"30","mandatory":true,"type":"text"}});
+		actions.add({"type":"add_after","name":"option-2","input":{"label":"Option 3","name":"option-3","placeholder":"Enter the option","min_length":"0","max_length":"30","mandatory":true,"type":"text"}});
+		actions.add({"type":"add_after","name":"option-3","input":{"label":"Option 4","name":"option-4","placeholder":"Enter the option","min_length":"0","max_length":"30","mandatory":true,"type":"text"}});
+	}
+}
+return {"type":"form_modification","actions":actions};
